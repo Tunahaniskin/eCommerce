@@ -13,7 +13,7 @@ public static class OrderModule
 
     public static IEndpointRouteBuilder MapOrderEndpoints(this IEndpointRouteBuilder app)
     {
-        CreateOrderEndpoint.MapEndpoint(app);
+        
         return app;
     }
 }

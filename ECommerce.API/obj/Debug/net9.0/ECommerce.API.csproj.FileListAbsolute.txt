@@ -18,7 +18,6 @@ C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Hu
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\MassTransit.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\MassTransit.Abstractions.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\MassTransit.RabbitMqTransport.dll
-C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Microsoft.Build.Locator.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Microsoft.CodeAnalysis.dll
@@ -132,3 +131,7 @@ C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\re
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\ECommerce.API.pdb
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\ECommerce.API.genruntimeconfig.cache
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\ref\ECommerce.API.dll
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\ECommerce.API.sourcelink.json
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll

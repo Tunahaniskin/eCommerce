@@ -3,6 +3,7 @@ using ECommerce.API.Modules.Catalog;
 using ECommerce.API.Modules.Order;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using ECommerce.API.Infrastructure.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,9 +14,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 2. RabbitMQ / MassTransit Yapılandırması
 builder.Services.AddMassTransit(x =>
 {
-    // İleride Consumer sınıflarımızı buraya kaydedeceğiz
-    
-    // Consumer'ı MassTransit'e kaydediyoruz
     x.AddConsumer<ECommerce.API.Modules.Catalog.Features.UpdateStock.OrderCreatedConsumer>();
     
     x.UsingRabbitMq((context, cfg) =>
@@ -31,15 +29,24 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// 3. Modüllerin Sisteme Kaydedilmesi
+// 3. Modüller ve Swagger Servisleri
 builder.Services.AddCatalogModule();
 builder.Services.AddOrderModule();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
+
+// 4. Swagger Middleware
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.MapGet("/", () => "E-Commerce Modular Monolith API is running!");
 
-app.MapCatalogEndpoints();
-app.MapOrderEndpoints(); 
+app.MapEndpoints(typeof(Program).Assembly);
 
 app.Run();
