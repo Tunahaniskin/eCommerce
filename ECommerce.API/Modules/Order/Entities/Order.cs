@@ -5,21 +5,33 @@ public class Order
     public Guid Id { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public decimal TotalAmount { get; private set; }
+    
+    // YENİ EKLENEN ALAN
+    public OrderStatus Status { get; private set; } 
+    
     public List<OrderItem> Items { get; private set; } = new();
 
     private Order() { }
 
-    public Order(List<OrderItem> items)
+    public Order(Guid id, List<OrderItem> items)
     {
         if (items == null || items.Count == 0)
             throw new ArgumentException("Sipariş en az bir ürün içermelidir.", nameof(items));
 
-        Id = Guid.NewGuid();
+        Id = id; // ID artık veritabanı veya kendi içinde değil, Endpoint'ten geliyor
         CreatedAt = DateTime.UtcNow;
         Items = items;
-        TotalAmount = items.Sum(x => x.UnitPrice * x.Quantity);
+        TotalAmount = items.Sum(x => x.UnitPrice * x.Quantity); // Fiyatlar Consumer'da gerçek değerleriyle set edilecek
+        Status = OrderStatus.Pending; 
+    }
+
+    // YENİ EKLENEN METOT: Durum makinesini işletmek için dışarıdan çağrılacak
+    public void UpdateStatus(OrderStatus newStatus)
+    {
+        Status = newStatus;
     }
 }
+
 
 public class OrderItem
 {

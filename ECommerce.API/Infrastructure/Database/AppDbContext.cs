@@ -23,6 +23,9 @@ public class AppDbContext : DbContext
 
         // Modüler izolasyon için tabloları şemalara (schemas) ayırıyoruz.
         
+        // Global Query Filter: Sadece silinmemiş ürünleri getir
+        modelBuilder.Entity<Product>().HasQueryFilter(p => !p.IsDeleted);
+        
         // Catalog Modülü
         modelBuilder.Entity<Product>().ToTable("Products", "catalog");
 

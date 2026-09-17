@@ -14,7 +14,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 2. RabbitMQ / MassTransit Yapılandırması
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<ECommerce.API.Modules.Catalog.Features.UpdateStock.OrderCreatedConsumer>();
+    x.AddConsumers(typeof(Program).Assembly);
     
     x.UsingRabbitMq((context, cfg) =>
     {

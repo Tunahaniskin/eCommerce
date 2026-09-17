@@ -1,8 +1,8 @@
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
-using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Modules.Order.Features.CreateOrder;
 
@@ -15,32 +15,38 @@ public class CreateOrderEndpoint : IEndpoint
             AppDbContext dbContext, 
             IPublishEndpoint publishEndpoint) =>
         {
-            // 1. Önce OrderItem listesini oluşturuyoruz
-            var orderItems = request.Items
-                .Select(item => new OrderItem(item.ProductId, item.Quantity, item.UnitPrice))
-                .ToList();
+            if (request.Items == null || !request.Items.Any())
+                return Results.BadRequest(new { Message = "Sipariş boş olamaz." });
 
-            // 2. Order nesnesini mevcut public kurucu metot üzerinden üretiyoruz
-            var order = new Entities.Order(orderItems);
+            // 1. Sadece Varlık Kontrolü (İstemciden gelen fiyatlara güvenmiyoruz, sadece ID kontrolü)
+            var productIds = request.Items.Select(x => x.ProductId).ToList();
+            var existingProducts = await dbContext.Products
+                .Where(p => productIds.Contains(p.Id))
+                .Select(p => p.Id)
+                .ToListAsync();
 
-            dbContext.Orders.Add(order);
-            await dbContext.SaveChangesAsync();
+            if (existingProducts.Count != productIds.Count)
+                return Results.BadRequest(new { Message = "Sepetteki bazı ürünler sistemde bulunamadı." });
 
-            // 3. Olayı RabbitMQ'ya fırlatıyoruz
-            await publishEndpoint.Publish(new OrderCreatedEvent(
-                order.Id,
-                order.Items.Select(x => new OrderItemDto(x.ProductId, x.Quantity)).ToList()
-            ));
+            // 2. Sipariş ID'sini üret ve Komutu Havuza Bırak
+            var orderId = Guid.NewGuid();
+            var message = new CreateOrderMessage(
+                orderId, 
+                request.Items.Select(x => new OrderItemDto(x.ProductId, x.Quantity)).ToList()
+            );
 
-            return Results.Ok(new 
+            await publishEndpoint.Publish(message);
+
+            // 3. İstemciye 202 Accepted dön
+            return Results.Accepted($"/api/order/orders/{orderId}", new 
             { 
-                order.Id, 
-                order.TotalAmount, 
-                Message = "Sipariş alındı ve stok güncelleme kuyruğa iletildi." 
+                OrderId = orderId, 
+                Message = "Siparişiniz sıraya alındı, arka planda işleniyor." 
             });
         });
     }
 }
 
 public record CreateOrderRequest(List<OrderItemRequest> Items);
-public record OrderItemRequest(Guid ProductId, int Quantity, decimal UnitPrice);
+// DİKKAT: UnitPrice alanını istemciden almayı tamamen kopardık.
+public record OrderItemRequest(Guid ProductId, int Quantity);
