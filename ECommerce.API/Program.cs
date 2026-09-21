@@ -5,12 +5,17 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ECommerce.API.Infrastructure.Endpoints;
 using FluentValidation;
+using ECommerce.API.Infrastructure.Database.Interceptors;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Veritabanı Bağlantısı (PostgreSQL)
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    var auditInterceptor = sp.GetRequiredService<AuditInterceptor>();
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .AddInterceptors(auditInterceptor); // EF Core komut zincirine dahil et
+});
 
 // 2. RabbitMQ / MassTransit Yapılandırması
 builder.Services.AddMassTransit(x =>
@@ -38,6 +43,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.AddSingleton<AuditInterceptor>(); // Interceptor'ı DI konteynerine ekle
 
 var app = builder.Build();
 
