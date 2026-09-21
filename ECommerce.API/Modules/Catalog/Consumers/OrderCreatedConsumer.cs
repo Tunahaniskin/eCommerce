@@ -8,49 +8,53 @@ namespace ECommerce.API.Modules.Catalog.Consumers;
 public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly IPublishEndpoint _publishEndpoint;
 
-    public OrderCreatedConsumer(AppDbContext dbContext, IPublishEndpoint publishEndpoint)
+    public OrderCreatedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _publishEndpoint = publishEndpoint;
     }
 
     public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
     {
         var message = context.Message;
         bool reservationFailed = false;
+        string failureReason = string.Empty;
         decimal totalAmount = 0;
 
-        // 1. Siparişteki tüm ürünleri tek tek dönüp rezerve etmeye çalışıyoruz
         foreach (var item in message.Items)
         {
             var product = await _dbContext.Products.FindAsync(item.ProductId);
-            
-            // Ürün yoksa veya ReserveStock(miktar) false dönerse (stok yetersizse)
-            if (product is null || !product.ReserveStock(item.Quantity))
+
+            if (product is null)
             {
                 reservationFailed = true;
-                break; // Döngüyü kır, diğer ürünlere bakmaya gerek yok
+                failureReason = $"Ürün bulunamadı (ProductId: {item.ProductId}).";
+                break;
             }
-            
-            totalAmount += product.Price * item.Quantity;
+
+            try
+            {
+                // Invariant metot void döner, yetersiz stokta InvalidOperationException fırlatır
+                product.ReserveStock(item.Quantity);
+                totalAmount += product.Price * item.Quantity;
+            }
+            catch (Exception ex)
+            {
+                reservationFailed = true;
+                failureReason = ex.Message;
+                break;
+            }
         }
 
-        // 2. Kontrol ve Sonuç Fırlatma
         if (reservationFailed)
         {
-            // Hata durumunda _dbContext.SaveChangesAsync() ÇAĞIRMIYORUZ. 
-            // Böylece o ana kadar başarıyla rezerve edilmiş ürünler varsa bile EF Core onları veritabanına yazmadan çöpe atar (Memory Rollback).
-            await _publishEndpoint.Publish(new StockReservationFailedEvent(message.OrderId, "Stok yetersiz veya ürün bulunamadı."));
+            // SaveChangesAsync çağrılmadığı için bellekteki nesne değişiklikleri çöpe atılır
+            await context.Publish(new StockReservationFailedEvent(message.OrderId, failureReason));
         }
         else
         {
-            // Tüm ürünler rezerve edildiyse veritabanına kaydet.
             await _dbContext.SaveChangesAsync();
-            
-            // Ödeme modülünün dinlemesi için başarılı rezervasyon olayını fırlat.
-            await _publishEndpoint.Publish(new StockReservedEvent(message.OrderId, totalAmount));
+            await context.Publish(new StockReservedEvent(message.OrderId, totalAmount));
         }
     }
 }

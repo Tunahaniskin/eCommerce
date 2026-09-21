@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "3rT0YbCr8xg=",
+  "dgSpecHash": "9SSFO4jJhy0=",
   "success": true,
   "projectFilePath": "C:\\Users\\Tunahan\\OneDrive\\Masaüstü\\eCommerce\\ECommerce.API\\ECommerce.API.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\Tunahan\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512",
+    "C:\\Users\\Tunahan\\.nuget\\packages\\fluentvalidation.dependencyinjectionextensions\\12.1.1\\fluentvalidation.dependencyinjectionextensions.12.1.1.nupkg.sha512",
     "C:\\Users\\Tunahan\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Tunahan\\.nuget\\packages\\masstransit\\8.2.5\\masstransit.8.2.5.nupkg.sha512",
     "C:\\Users\\Tunahan\\.nuget\\packages\\masstransit.abstractions\\8.2.5\\masstransit.abstractions.8.2.5.nupkg.sha512",

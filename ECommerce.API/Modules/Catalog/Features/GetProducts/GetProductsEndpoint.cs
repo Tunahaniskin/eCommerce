@@ -1,40 +1,52 @@
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
+using ECommerce.API.Infrastructure.Validation;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Modules.Catalog.Features.GetProducts;
+
+// Minimal API'de query string parametrelerini bu record'a bağlayacağız
+public record GetProductsRequest(int Page = 1, int PageSize = 10);
 
 public class GetProductsEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        // 1. Tekil Ürün Getirme (Get By Id)
-        app.MapGet("/api/catalog/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
+        // [AsParameters] attribute'u URL'deki ?Page=x&PageSize=y parametrelerini record'a doldurur
+        app.MapGet("/api/catalog/products", async ([AsParameters] GetProductsRequest request, AppDbContext dbContext) =>
         {
-            var product = await dbContext.Products
-                .AsNoTracking() // RAM'de entity tracking mekanizmasını kapatır, okumayı hızlandırır
-                .Where(p => p.Id == id)
-                .Select(p => new ProductDto(p.Id, p.Name, p.Price, p.Stock, p.ReservedStock)) // Projection
-                .FirstOrDefaultAsync();
-
-            if (product is null)
-                return Results.NotFound(new { Message = "Ürün bulunamadı." });
-
-            return Results.Ok(product);
-        });
-
-        // 2. Tüm Ürünleri Listeleme (Get All)
-        app.MapGet("/api/catalog/products", async (AppDbContext dbContext) =>
-        {
-            var products = await dbContext.Products
+            // 1. Temel Sorgu: İzlemeyi kapat ve silinenleri gizle
+            var query = dbContext.Products
                 .AsNoTracking()
-                .Select(p => new ProductDto(p.Id, p.Name, p.Price, p.Stock, p.ReservedStock))
+                .Where(p => !p.IsDeleted);
+
+            // 2. Toplam Kayıt Sayısı (Sayfalama hesabı için gerekli)
+            var totalCount = await query.CountAsync();
+
+            // 3. Veriyi Çekme (Skip ve Take ile)
+            var products = await query
+                .OrderBy(p => p.Id) // Sayfalamanın tutarlı çalışması için mutlaka bir sıralama (Order) olmalıdır
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(p => new 
+                {
+                    p.Id,
+                    p.Name,
+                    p.Price,
+                    p.Stock
+                })
                 .ToListAsync();
 
-            return Results.Ok(products);
-        });
+            // 4. İstemciye standart sayfalama nesnesi dön
+            return Results.Ok(new
+            {
+                Data = products,
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize,
+                TotalPages = (int)Math.Ceiling((double)totalCount / request.PageSize)
+            });
+        })
+        .AddEndpointFilter<ValidationFilter<GetProductsRequest>>(); // Sayfalama validasyonu devrede
     }
 }
-
-// Entity'i dışarı sızdırmamak için kullanılan okuma modeli
-public record ProductDto(Guid Id, string Name, decimal Price, int Stock, int ReservedStock);

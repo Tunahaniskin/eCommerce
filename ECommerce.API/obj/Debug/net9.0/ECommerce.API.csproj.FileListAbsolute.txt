@@ -135,3 +135,5 @@ C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\obj\Debug\net9.0\EC
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\FluentValidation.dll
+C:\Users\Tunahan\OneDrive\Masaüstü\eCommerce\ECommerce.API\bin\Debug\net9.0\FluentValidation.DependencyInjectionExtensions.dll

@@ -9,7 +9,10 @@ public class Product
     public int ReservedStock { get; private set; } 
     public bool IsDeleted { get; private set; }
 
-    private Product() { }
+    private Product() 
+    { 
+        Name = default!; 
+    }
 
     public Product(string name, decimal price, int stock)
     {
@@ -21,22 +24,26 @@ public class Product
     }
 
     // 1. ADIM: Stok yeterliyse rezerve et
-    public bool ReserveStock(int quantity)
+    public void ReserveStock(int quantity)
     {
-        // Kullanılabilir stok = Toplam Stok - Rezerve Edilmiş Stok
-        var availableStock = Stock - ReservedStock;
-        
-        if (availableStock >= quantity)
-        {
-            ReservedStock += quantity;
-            return true;
-        }
-        return false;
+        if (quantity <= 0)
+            throw new ArgumentException("Rezerve edilecek miktar sıfırdan büyük olmalıdır.", nameof(quantity));
+
+        if (Stock - ReservedStock < quantity)
+            throw new InvalidOperationException("Yetersiz stok. İstenen miktar mevcut rezerve edilebilir stoğu aşıyor.");
+
+        ReservedStock += quantity;
     }
 
     // 2. ADIM (BAŞARILI): Ödeme alındı, rezerve stoğu tamamen sistemden düş
     public void CommitStock(int quantity)
     {
+        if (quantity <= 0)
+            throw new ArgumentException("Sistemden düşülecek miktar sıfırdan büyük olmalıdır.", nameof(quantity));
+
+        if (ReservedStock < quantity)
+            throw new InvalidOperationException("Rezerve edilenden daha fazla stok sistemden düşülemez.");
+
         Stock -= quantity;
         ReservedStock -= quantity;
     }
@@ -44,11 +51,20 @@ public class Product
     // 2. ADIM (BAŞARISIZ): Ödeme patladı, ayrılan stoğu serbest bırak (Rollback)
     public void RollbackStock(int quantity)
     {
+        if (quantity <= 0)
+            throw new ArgumentException("Serbest bırakılacak miktar sıfırdan büyük olmalıdır.", nameof(quantity));
+
+        if (ReservedStock < quantity)
+            throw new InvalidOperationException("Rezerve edilenden daha fazla stok serbest bırakılamaz.");
+
         ReservedStock -= quantity;
     }
 
     public void MarkAsDeleted()
     {
+        if (IsDeleted)
+            throw new InvalidOperationException("Ürün zaten silinmiş durumda.");
+
         IsDeleted = true;
     }
 }

@@ -4,6 +4,7 @@ using ECommerce.API.Modules.Order;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ECommerce.API.Infrastructure.Endpoints;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,8 +22,8 @@ builder.Services.AddMassTransit(x =>
         cfg.Host(builder.Configuration["RabbitMQ:Host"], 
                  Convert.ToUInt16(builder.Configuration["RabbitMQ:Port"]), "/", h =>
         {
-            h.Username(builder.Configuration["RabbitMQ:Username"]);
-            h.Password(builder.Configuration["RabbitMQ:Password"]);
+            h.Username(builder.Configuration["RabbitMQ:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMQ:Password"] ?? "guest");
         });
         
         cfg.ConfigureEndpoints(context);
@@ -35,6 +36,8 @@ builder.Services.AddOrderModule();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 var app = builder.Build();
 
