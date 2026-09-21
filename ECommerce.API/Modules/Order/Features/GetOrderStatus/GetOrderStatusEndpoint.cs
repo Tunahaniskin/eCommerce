@@ -8,7 +8,7 @@ public class GetOrderStatusEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/order/orders/{id:guid}/status", async (Guid id, AppDbContext dbContext) =>
+        app.MapGet("/orders/{id:guid}/status", async (Guid id, AppDbContext dbContext) =>
         {
             if (id == Guid.Empty)
                 return Results.BadRequest(new { Message = "Geçersiz sipariş kimliği." });

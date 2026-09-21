@@ -1,7 +1,9 @@
 using ECommerce.API.Infrastructure.Database.Entities; // 1. EKLENEN USING
 using ECommerce.API.Modules.Catalog.Entities;
 using ECommerce.API.Modules.Order.Entities;
+using ECommerce.API.Modules.Auth.Entities;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace ECommerce.API.Infrastructure.Database;
 
@@ -16,6 +18,8 @@ public class AppDbContext : DbContext
 
     // Catalog Modülü Tabloları
     public DbSet<Product> Products { get; set; }
+
+    public DbSet<User> Users { get; set; }
 
     // Order Modülü Tabloları
     public DbSet<Order> Orders { get; set; }
@@ -39,5 +43,8 @@ public class AppDbContext : DbContext
 
         // 3. EKLENEN ŞEMA TANIMI: AuditLogs tablosunu 'audit' şemasına taşıyoruz
         modelBuilder.Entity<AuditLog>().ToTable("AuditLogs", "audit");
+
+        modelBuilder.Entity<User>().ToTable("Users", "auth");
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique(); // Email benzersiz olmalı
     }
 }

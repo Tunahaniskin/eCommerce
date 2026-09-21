@@ -11,7 +11,7 @@ public class CreateOrderEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/order/orders", async (
+        app.MapPost("/orders", async (
             CreateOrderRequest request, 
             AppDbContext dbContext, 
             IPublishEndpoint publishEndpoint) =>

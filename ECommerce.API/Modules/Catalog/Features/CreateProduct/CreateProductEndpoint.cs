@@ -5,11 +5,11 @@ using ECommerce.API.Modules.Catalog.Entities;
 
 namespace ECommerce.API.Modules.Catalog.Features.CreateProduct;
 
-public class CreateProductEndpoint : IEndpoint
+public class CreateProductEndpoint : IAdminEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/catalog/products", async (CreateProductRequest request, AppDbContext dbContext) =>
+        app.MapPost("/catalog/products", async (CreateProductRequest request, AppDbContext dbContext) =>
         {
             var product = new Product(request.Name, request.Price, request.Stock);
             

@@ -1,52 +1,77 @@
+using System.Security.Claims;
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
-using ECommerce.API.Infrastructure.Validation;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Modules.Catalog.Features.GetProducts;
-
-// Minimal API'de query string parametrelerini bu record'a bağlayacağız
-public record GetProductsRequest(int Page = 1, int PageSize = 10);
 
 public class GetProductsEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        // [AsParameters] attribute'u URL'deki ?Page=x&PageSize=y parametrelerini record'a doldurur
-        app.MapGet("/api/catalog/products", async ([AsParameters] GetProductsRequest request, AppDbContext dbContext) =>
+        app.MapGet("/catalog/products", async (
+            [AsParameters] GetProductsRequest request, 
+            HttpContext httpContext,
+            AppDbContext dbContext) =>
         {
-            // 1. Temel Sorgu: İzlemeyi kapat ve silinenleri gizle
-            var query = dbContext.Products
-                .AsNoTracking()
-                .Where(p => !p.IsDeleted);
+            // Token geldiyse HttpContext üzerinden güvenli bir şekilde authenticate et
+            var authResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+            var user = authResult.Principal ?? httpContext.User;
 
-            // 2. Toplam Kayıt Sayısı (Sayfalama hesabı için gerekli)
-            var totalCount = await query.CountAsync();
+            // Debug için Konsola Yazdır:
+            Console.WriteLine($"--> Authenticated mı?: {user.Identity?.IsAuthenticated}");
+            foreach (var c in user.Claims)
+            {
+                Console.WriteLine($"--> Claim: {c.Type} = {c.Value}");
+            }
 
-            // 3. Veriyi Çekme (Skip ve Take ile)
+            // Role kontrolü (Hem standart URI hem düz 'role' kontrolü)
+            bool isAdmin = user.IsInRole("Admin") || 
+                           user.HasClaim(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value == "Admin");
+
+            Console.WriteLine($"--> isAdmin Kararı: {isAdmin}");
+
+            // DbContext'te HasQueryFilter(p => !p.IsDeleted) tanımlı.
+            // Admin "deleted" veya "all" istiyorsa bu global filtreyi IgnoreQueryFilters() ile bypass et.
+            var statusKey = request.Status?.ToLower() ?? "active";
+
+            IQueryable<ECommerce.API.Modules.Catalog.Entities.Product> query;
+
+            if (isAdmin && (statusKey == "deleted" || statusKey == "all"))
+            {
+                // Global HasQueryFilter devre dışı bırakılıyor
+                var rawQuery = dbContext.Products.AsNoTracking().IgnoreQueryFilters();
+                query = statusKey == "deleted"
+                    ? rawQuery.Where(p => p.IsDeleted)   // sadece silinmişler
+                    : rawQuery;                           // "all" → hiçbir filtre yok
+            }
+            else
+            {
+                // Global Filter aktif → sadece !IsDeleted olanlar gelir (müşteri veya admin "active")
+                query = dbContext.Products.AsNoTracking();
+            }
+
+            query = query.OrderByDescending(p => p.Id); 
+
             var products = await query
-                .OrderBy(p => p.Id) // Sayfalamanın tutarlı çalışması için mutlaka bir sıralama (Order) olmalıdır
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(p => new 
-                {
+                .Select(p => new ProductResponse(
                     p.Id,
                     p.Name,
                     p.Price,
-                    p.Stock
-                })
+                    p.Stock,
+                    p.IsDeleted
+                ))
                 .ToListAsync();
 
-            // 4. İstemciye standart sayfalama nesnesi dön
-            return Results.Ok(new
-            {
-                Data = products,
-                TotalCount = totalCount,
-                Page = request.Page,
-                PageSize = request.PageSize,
-                TotalPages = (int)Math.Ceiling((double)totalCount / request.PageSize)
-            });
-        })
-        .AddEndpointFilter<ValidationFilter<GetProductsRequest>>(); // Sayfalama validasyonu devrede
+            return Results.Ok(products);
+        });
     }
 }
+
+public record GetProductsRequest(int Page = 1, int PageSize = 10, string? Status = "active");
+
+public record ProductResponse(Guid Id, string Name, decimal Price, int Stock, bool IsDeleted);

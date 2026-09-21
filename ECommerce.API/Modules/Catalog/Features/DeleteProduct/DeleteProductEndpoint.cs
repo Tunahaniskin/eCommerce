@@ -4,12 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Modules.Catalog.Features.DeleteProduct;
 
-public class DeleteProductEndpoint : IEndpoint
+public class DeleteProductEndpoint : IAdminEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         // Route constraint eklendi: "{id:guid}"
-        app.MapDelete("/api/catalog/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
+        app.MapDelete("/catalog/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
         {
             if (id == Guid.Empty)
                 return Results.BadRequest(new { Message = "Geçersiz ürün kimliği." });
