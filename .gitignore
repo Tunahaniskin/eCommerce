@@ -1,0 +1,92 @@
+## ============================================================
+##  .gitignore — eCommerce (.NET API + Docker)
+## ============================================================
+
+# ── .NET Build Output ────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+out/
+publish/
+
+# ── .NET User & Local Settings ──────────────────────────────
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/settings.json
+
+# ── NuGet ────────────────────────────────────────────────────
+*.nupkg
+*.snupkg
+**/[Pp]ackages/
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ── Secrets & Environment ────────────────────────────────────
+# NEVER commit real secrets!
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+*.env
+.env
+.env.*
+!.env.example
+secrets.json
+usersecrets/
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+[Ll]og/
+
+# ── Test Results ─────────────────────────────────────────────
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+TestResults/
+
+# ── Docker ───────────────────────────────────────────────────
+# docker-compose.override.yml — local overrides (DB passwords etc.)
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+
+# ── OS & IDE Artifacts ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# ── JetBrains Rider ─────────────────────────────────────────
+.idea/
+*.sln.iml
+
+# ── Visual Studio ────────────────────────────────────────────
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+.vs/
+[Ee]xpress/
+$tf/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+_TeamCity*
+*.dotCover
+
+# ── Windows specific ─────────────────────────────────────────
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
