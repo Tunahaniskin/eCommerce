@@ -22,13 +22,13 @@ public class CreateOrderEndpoint : IEndpoint
                 .Select(g => new OrderItemRequest(g.Key, g.Sum(x => x.Quantity)))
                 .ToList();
 
-            // Toplama işlemi sonrası genel adet sınırını tekrar kontrol et (Opsiyonel ama güvenli)
+            // Toplama işlemi sonrası genel adet sınırını kontrol et
             if (consolidatedItems.Any(i => i.Quantity > 50))
                 return Results.BadRequest(new { Message = "Aynı üründen toplamda en fazla 50 adet sipariş verilebilir." });
 
             var requestedProductIds = consolidatedItems.Select(i => i.ProductId).ToList();
 
-            // Fiyat manipülasyonunu engellemek için doğrudan Catalog şemasından doğrula
+            // Fiyat manipülasyonunu engellemek için doğrudan Product şemasından doğrula
             var products = await dbContext.Products
                 .AsNoTracking()
                 .Where(p => requestedProductIds.Contains(p.Id))

@@ -1,22 +1,28 @@
-using System.Security.Claims;
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
+using ECommerce.API.Infrastructure.Extensions;
+using ECommerce.API.Modules.Auth.Constants;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
-namespace ECommerce.API.Modules.Catalog.Features.GetProductById;
+namespace ECommerce.API.Modules.Product.Features.GetProductById;
 
 public class GetProductByIdEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapGet("/catalog/products/{id:guid}", async (
+        app.MapGet("/products/{id:guid}", async (
             Guid id, 
-            ClaimsPrincipal user, 
+            HttpContext httpContext,
             AppDbContext dbContext) =>
         {
+            // Token geldiyse HttpContext üzerinden authenticate et
+            var authResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+            var user = authResult.Principal ?? httpContext.User;
+
             // IgnoreQueryFilters() → HasQueryFilter(!IsDeleted) bypass edildi.
-            // Böylece silinmiş ürünü de veritabanından çekebiliyoruz;
-            // ardından kim istediğine göre karar veriyoruz.
             var product = await dbContext.Products
                 .AsNoTracking()
                 .IgnoreQueryFilters()
@@ -26,12 +32,11 @@ public class GetProductByIdEndpoint : IEndpoint
             if (product is null)
                 return Results.NotFound(new { Message = "Ürün bulunamadı." });
 
-            // Role kontrolü (GetProductsEndpoint ile aynı yöntem)
-            bool isAdmin = user.IsInRole("Admin") ||
-                           user.HasClaim(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value == "Admin");
+            // YENİ PBAC KONTROLÜ: Kullanıcının silinmiş ürünleri okuma izni var mı?
+            bool canReadDeleted = user.HasPermission(Permissions.Product.ReadDeleted);
 
-            // Ürün soft-delete yapılmışsa ve istek atan Admin DEĞİLSE → 404 (BOLA Koruması)
-            if (product.IsDeleted && !isAdmin)
+            // Ürün soft-delete yapılmışsa ve istek atan kişinin yetkisi YOKSA → 404 (BOLA/IDOR Koruması)
+            if (product.IsDeleted && !canReadDeleted)
                 return Results.NotFound(new { Message = "Ürün bulunamadı." });
 
             var response = new ProductDetailResponse(

@@ -3,7 +3,7 @@ using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
-namespace ECommerce.API.Modules.Catalog.Consumers;
+namespace ECommerce.API.Modules.Product.Consumers;
 
 public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
 {

@@ -11,7 +11,7 @@ public static class EndpointExtensions
         // 1. Grupları ve güvenlik sınırlarını tanımla
         var publicGroup = app.MapGroup("/api");
         var adminGroup = app.MapGroup("/api/admin")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization();
 
         // 2. Assembly içindeki tüm endpoint sınıflarını tara
         var endpointTypes = assembly.GetTypes()

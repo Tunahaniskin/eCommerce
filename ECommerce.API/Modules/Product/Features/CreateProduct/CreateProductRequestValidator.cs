@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace ECommerce.API.Modules.Catalog.Features.CreateProduct;
+namespace ECommerce.API.Modules.Product.Features.CreateProduct;
 
 public class CreateProductRequestValidator : AbstractValidator<CreateProductRequest>
 {

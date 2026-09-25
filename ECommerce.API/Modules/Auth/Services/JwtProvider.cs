@@ -2,41 +2,49 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using ECommerce.API.Modules.Auth.Entities;
-using ECommerce.API.Modules.Auth.Options;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ECommerce.API.Modules.Auth.Services;
 
 public class JwtProvider
 {
-    private readonly JwtOptions _jwtOptions;
+    private readonly IConfiguration _configuration;
 
-    // IOptions pattern ile appsettings.json'dan verileri okuyoruz
-    public JwtProvider(IOptions<JwtOptions> jwtOptions)
+    public JwtProvider(IConfiguration configuration)
     {
-        _jwtOptions = jwtOptions.Value;
+        _configuration = configuration;
     }
 
     public string GenerateToken(User user)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(ClaimTypes.Role, user.Role.ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        // Yeni Mimari: Kullanıcının yetkilerini claim olarak ekle
+        if (user.Permissions != null && user.Permissions.Any())
+        {
+            foreach (var permission in user.Permissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
+        }
+
+        var secretKey = _configuration["JwtOptions:SecretKey"]!;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
+            issuer: _configuration["JwtOptions:Issuer"],
+            audience: _configuration["JwtOptions:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes),
-            signingCredentials: creds
-        );
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

@@ -1,17 +1,19 @@
-using System.Security.Claims;
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
+using ECommerce.API.Infrastructure.Extensions;
+using ECommerce.API.Modules.Auth.Constants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
-namespace ECommerce.API.Modules.Catalog.Features.GetProducts;
+namespace ECommerce.API.Modules.Product.Features.GetProducts;
 
 public class GetProductsEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapGet("/catalog/products", async (
+        app.MapGet("/products", async (
             [AsParameters] GetProductsRequest request, 
             HttpContext httpContext,
             AppDbContext dbContext) =>
@@ -20,36 +22,34 @@ public class GetProductsEndpoint : IEndpoint
             var authResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var user = authResult.Principal ?? httpContext.User;
 
-            // Debug için Konsola Yazdır:
-            Console.WriteLine($"--> Authenticated mı?: {user.Identity?.IsAuthenticated}");
-            foreach (var c in user.Claims)
-            {
-                Console.WriteLine($"--> Claim: {c.Type} = {c.Value}");
-            }
+            // YENİ PBAC KONTROLÜ: Kullanıcının silinmiş ürünleri okuma izni var mı?
+            bool canReadDeleted = user.HasPermission(Permissions.Product.ReadDeleted);
 
-            // Role kontrolü (Hem standart URI hem düz 'role' kontrolü)
-            bool isAdmin = user.IsInRole("Admin") || 
-                           user.HasClaim(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value == "Admin");
-
-            Console.WriteLine($"--> isAdmin Kararı: {isAdmin}");
-
-            // DbContext'te HasQueryFilter(p => !p.IsDeleted) tanımlı.
-            // Admin "deleted" veya "all" istiyorsa bu global filtreyi IgnoreQueryFilters() ile bypass et.
             var statusKey = request.Status?.ToLower() ?? "active";
 
-            IQueryable<ECommerce.API.Modules.Catalog.Entities.Product> query;
-
-            if (isAdmin && (statusKey == "deleted" || statusKey == "all"))
+            // YETKİ KONTROLÜ: Kullanıcı silinmiş ürünleri ("deleted" veya "all") istiyorsa ama yetkisi yoksa kapıdan çevir
+            if ((statusKey == "deleted" || statusKey == "all") && !canReadDeleted)
             {
-                // Global HasQueryFilter devre dışı bırakılıyor
+                return Results.Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "Erişim Reddedildi",
+                    detail: "Silinmiş ürünleri listeleme yetkiniz bulunmuyor.");
+            }
+
+            IQueryable<ECommerce.API.Modules.Product.Entities.Product> query;
+
+            // YETKİ ONAYLANDI: Kullanıcının yetkisi var ve silinmiş/tüm ürünleri görmek istiyor
+            if (canReadDeleted && (statusKey == "deleted" || statusKey == "all"))
+            {
+                // Global HasQueryFilter (IsDeleted == false) devre dışı bırakılıyor
                 var rawQuery = dbContext.Products.AsNoTracking().IgnoreQueryFilters();
                 query = statusKey == "deleted"
-                    ? rawQuery.Where(p => p.IsDeleted)   // sadece silinmişler
-                    : rawQuery;                           // "all" → hiçbir filtre yok
+                    ? rawQuery.Where(p => p.IsDeleted)   // Sadece silinmişler
+                    : rawQuery;                          // "all" → Filtre yok, hepsi
             }
             else
             {
-                // Global Filter aktif → sadece !IsDeleted olanlar gelir (müşteri veya admin "active")
+                // Standart müşteri veya "active" ürün isteyen yetkili
                 query = dbContext.Products.AsNoTracking();
             }
 

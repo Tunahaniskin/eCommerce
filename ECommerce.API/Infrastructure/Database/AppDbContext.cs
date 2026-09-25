@@ -1,5 +1,5 @@
 using ECommerce.API.Infrastructure.Database.Entities; // 1. EKLENEN USING
-using ECommerce.API.Modules.Catalog.Entities;
+using ECommerce.API.Modules.Product.Entities;
 using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Modules.Auth.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -34,8 +34,8 @@ public class AppDbContext : DbContext
         // Global Query Filter: Sadece silinmemiş ürünleri getir
         modelBuilder.Entity<Product>().HasQueryFilter(p => !p.IsDeleted);
         
-        // Catalog Modülü
-        modelBuilder.Entity<Product>().ToTable("Products", "catalog");
+        // Product Modülü
+        modelBuilder.Entity<Product>().ToTable("Products", "product");
 
         // Order Modülü
         modelBuilder.Entity<Order>().ToTable("Orders", "order");
@@ -44,7 +44,16 @@ public class AppDbContext : DbContext
         // 3. EKLENEN ŞEMA TANIMI: AuditLogs tablosunu 'audit' şemasına taşıyoruz
         modelBuilder.Entity<AuditLog>().ToTable("AuditLogs", "audit");
 
+        // Auth Modülü
         modelBuilder.Entity<User>().ToTable("Users", "auth");
-        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique(); // Email benzersiz olmalı
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+
+        // Permissions listesini PostgreSQL text array olarak sakla
+        modelBuilder.Entity<User>()
+            .Property(u => u.Permissions)
+            .HasColumnType("text[]");
+
+        // Global Query Filter (Sadece silinmemiş kullanıcıları getir)
+        modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
     }
 }

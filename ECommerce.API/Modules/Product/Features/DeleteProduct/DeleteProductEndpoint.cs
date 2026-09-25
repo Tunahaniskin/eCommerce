@@ -1,15 +1,16 @@
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
+using ECommerce.API.Infrastructure.Extensions;
+using ECommerce.API.Modules.Auth.Constants;
 using Microsoft.EntityFrameworkCore;
 
-namespace ECommerce.API.Modules.Catalog.Features.DeleteProduct;
+namespace ECommerce.API.Modules.Product.Features.DeleteProduct;
 
 public class DeleteProductEndpoint : IAdminEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        // Route constraint eklendi: "{id:guid}"
-        app.MapDelete("/catalog/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
+        app.MapDelete("/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
         {
             if (id == Guid.Empty)
                 return Results.BadRequest(new { Message = "Geçersiz ürün kimliği." });
@@ -19,7 +20,6 @@ public class DeleteProductEndpoint : IAdminEndpoint
             if (product is null)
                 return Results.NotFound(new { Message = "Ürün bulunamadı." });
 
-            // Zaten silinmişse tekrar silmeye çalışma (Idempotency / Hata önleme)
             if (product.IsDeleted)
                 return Results.NotFound(new { Message = "Ürün bulunamadı." });
 
@@ -27,6 +27,7 @@ public class DeleteProductEndpoint : IAdminEndpoint
             await dbContext.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Ürün başarıyla silindi." });
-        });
+        })
+        .RequirePermission(Permissions.Product.Delete);
     }
 }

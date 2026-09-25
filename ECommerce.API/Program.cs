@@ -1,5 +1,5 @@
 using ECommerce.API.Infrastructure.Database;
-using ECommerce.API.Modules.Catalog;
+using ECommerce.API.Modules.Product;
 using ECommerce.API.Modules.Order;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +42,7 @@ builder.Services.AddMassTransit(x =>
 });
 
 // 3. Modüller, Validation ve Swagger
-builder.Services.AddCatalogModule();
+builder.Services.AddProductModule();
 builder.Services.AddOrderModule();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddEndpointsApiExplorer();
@@ -91,7 +91,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
             
-            // Map temizlendiğinde ClaimTypes.Role artık kısa "role" string'i olarak JWT'de kalır
+            // Map temizlendiğinde ClaimTypes. artık kısa "role" string'i olarak JWT'de kalır
             RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
             NameClaimType = ClaimTypes.NameIdentifier
         };
@@ -119,5 +119,8 @@ app.MapGet("/", () => "E-Commerce Modular Monolith API is running!");
 
 // Reflection ile Endpoint'leri Kaydet
 app.MapEndpoints(typeof(Program).Assembly);
+
+// Uygulama başlamadan önce Seed işlemini çalıştır
+await DbInitializer.SeedAsync(app.Services, app.Configuration);
 
 app.Run();

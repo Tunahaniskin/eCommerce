@@ -1,4 +1,4 @@
-namespace ECommerce.API.Modules.Catalog.Entities;
+namespace ECommerce.API.Modules.Product.Entities;
 
 public class Product
 {

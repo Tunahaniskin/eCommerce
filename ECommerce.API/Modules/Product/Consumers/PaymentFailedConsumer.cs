@@ -3,7 +3,7 @@ using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
-namespace ECommerce.API.Modules.Catalog.Consumers;
+namespace ECommerce.API.Modules.Product.Consumers;
 
 public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
 {
@@ -19,7 +19,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
     public async Task Consume(ConsumeContext<PaymentFailedEvent> context)
     {
         var message = context.Message;
-        _logger.LogWarning("[CATALOG SAGA] Sipariş {OrderId} için ödeme başarısız. Rezerve stoklar iade ediliyor.", message.OrderId);
+        _logger.LogWarning("[PRODUCT SAGA] Sipariş {OrderId} için ödeme başarısız. Rezerve stoklar iade ediliyor.", message.OrderId);
 
         // İade edilecek ürünleri ve miktarları bulmak için sipariş kalemlerini çekiyoruz.
         var orderItems = await _dbContext.Orders
@@ -37,6 +37,6 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
                     .SetProperty(p => p.ReservedStock, p => p.ReservedStock - item.Quantity));
         }
 
-        _logger.LogInformation("[CATALOG SAGA] Sipariş {OrderId} için rezerve stoklar başarıyla serbest bırakıldı.", message.OrderId);
+        _logger.LogInformation("[PRODUCT SAGA] Sipariş {OrderId} için rezerve stoklar başarıyla serbest bırakıldı.", message.OrderId);
     }
 }
