@@ -2,6 +2,7 @@ using ECommerce.API.Infrastructure.Database.Entities; // 1. EKLENEN USING
 using ECommerce.API.Modules.Product.Entities;
 using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Modules.Auth.Entities;
+using ECommerce.API.Modules.Payment.Entities;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -15,6 +16,7 @@ public class AppDbContext : DbContext
 
     // Ortak Altyapı Tabloları
     public DbSet<AuditLog> AuditLogs { get; set; } // 2. EKLENEN DBSET
+    public DbSet<ProcessedMessage> ProcessedMessages { get; set; }
 
     // Catalog Modülü Tabloları
     public DbSet<Product> Products { get; set; }
@@ -24,6 +26,9 @@ public class AppDbContext : DbContext
     // Order Modülü Tabloları
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
+
+    // Payment Modülü Tabloları
+    public DbSet<Payment> Payments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,10 +44,27 @@ public class AppDbContext : DbContext
 
         // Order Modülü
         modelBuilder.Entity<Order>().ToTable("Orders", "order");
+        modelBuilder.Entity<Order>()
+            .Property(o => o.Status)
+            .HasConversion<string>()
+            .HasMaxLength(30);
+        
         modelBuilder.Entity<OrderItem>().ToTable("OrderItems", "order");
+
+        // Payment Modülü
+        modelBuilder.Entity<Payment>().ToTable("Payments", "payment");
+        modelBuilder.Entity<Payment>().Property(p => p.Amount).HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<Payment>()
+            .Property(p => p.Status)
+            .HasConversion<string>()
+            .HasMaxLength(30);
 
         // 3. EKLENEN ŞEMA TANIMI: AuditLogs tablosunu 'audit' şemasına taşıyoruz
         modelBuilder.Entity<AuditLog>().ToTable("AuditLogs", "audit");
+
+        // Idempotency Tablosu
+        modelBuilder.Entity<ProcessedMessage>().ToTable("ProcessedMessages", "audit");
+        modelBuilder.Entity<ProcessedMessage>().HasKey(p => new { p.MessageId, p.ConsumerName });
 
         // Auth Modülü
         modelBuilder.Entity<User>().ToTable("Users", "auth");

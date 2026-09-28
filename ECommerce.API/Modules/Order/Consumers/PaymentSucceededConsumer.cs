@@ -19,11 +19,12 @@ public class PaymentSucceededConsumer : IConsumer<PaymentSucceededEvent>
         var message = context.Message;
 
         var order = await _dbContext.Orders.FindAsync(message.OrderId);
-        if (order is null) return;
-
-        // Sipariş durumunu Paid (Ödendi) yapıyoruz
-        order.UpdateStatus(OrderStatus.Paid);
-
-        await _dbContext.SaveChangesAsync();
+        
+        // Idempotency: Sipariş Pending veya StockReserved durumundaysa Paid yapılmalı.
+        if (order != null && (order.Status == OrderStatus.Pending || order.Status == OrderStatus.StockReserved))
+        {
+            order.MarkAsPaid();
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }

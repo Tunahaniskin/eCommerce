@@ -23,9 +23,9 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
 
         var order = await _dbContext.Orders.FindAsync(context.Message.OrderId);
 
-        if (order != null && order.Status == OrderStatus.Pending)
+        if (order != null && (order.Status == OrderStatus.Pending || order.Status == OrderStatus.StockReserved))
         {
-            order.UpdateStatus(OrderStatus.Cancelled);
+            order.Cancel(message.Reason);
             await _dbContext.SaveChangesAsync();
         }
 

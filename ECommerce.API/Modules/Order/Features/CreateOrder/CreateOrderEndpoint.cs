@@ -1,9 +1,6 @@
-using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
 using ECommerce.API.Infrastructure.Validation;
-using ECommerce.API.Shared.Contracts;
-using MassTransit;
-using Microsoft.EntityFrameworkCore;
+using ECommerce.API.Infrastructure.Handlers;
 
 namespace ECommerce.API.Modules.Order.Features.CreateOrder;
 
@@ -13,51 +10,21 @@ public class CreateOrderEndpoint : IEndpoint
     {
         app.MapPost("/orders", async (
             CreateOrderRequest request, 
-            AppDbContext dbContext, 
-            IPublishEndpoint publishEndpoint) =>
+            ICommandHandler<CreateOrderCommand, IResult> handler) =>
         {
-            // Aynı ProductId'lerin miktarlarını toplayarak birleştir
-            var consolidatedItems = request.Items
-                .GroupBy(i => i.ProductId)
-                .Select(g => new OrderItemRequest(g.Key, g.Sum(x => x.Quantity)))
+            // 1. İstek (Request) verisini Komut (Command) verisine dönüştür
+            var commandItems = request.Items
+                .Select(i => new OrderItemCommand(i.ProductId, i.Quantity))
                 .ToList();
+                
+            var command = new CreateOrderCommand(commandItems);
 
-            // Toplama işlemi sonrası genel adet sınırını kontrol et
-            if (consolidatedItems.Any(i => i.Quantity > 50))
-                return Results.BadRequest(new { Message = "Aynı üründen toplamda en fazla 50 adet sipariş verilebilir." });
-
-            var requestedProductIds = consolidatedItems.Select(i => i.ProductId).ToList();
-
-            // Fiyat manipülasyonunu engellemek için doğrudan Product şemasından doğrula
-            var products = await dbContext.Products
-                .AsNoTracking()
-                .Where(p => requestedProductIds.Contains(p.Id))
-                .Select(p => new { p.Id, p.Price })
-                .ToListAsync();
-
-            if (products.Count != requestedProductIds.Count)
-                return Results.BadRequest(new { Message = "Sepetteki bazı ürünler katalogda bulunamadı." });
-
-            var productPriceMap = products.ToDictionary(p => p.Id, p => p.Price);
-            var orderId = Guid.NewGuid();
-
-            var orderItems = consolidatedItems.Select(item => new CreateOrderItemMessage(
-                item.ProductId,
-                item.Quantity,
-                productPriceMap[item.ProductId]
-            )).ToList();
-
-            await publishEndpoint.Publish(new CreateOrderMessage(orderId, orderItems));
-
-            return Results.Accepted($"/api/order/orders/{orderId}/status", new
-            {
-                OrderId = orderId,
-                Message = "Sipariş işleme alındı."
-            });
+            // 2. Komutu Handler'a gönder (İş mantığı çalışsın) ve sonucu direkt dön
+            return await handler.HandleAsync(command);
         })
         .AddEndpointFilter<ValidationFilter<CreateOrderRequest>>();
     }
 }
 
 public record CreateOrderRequest(List<OrderItemRequest> Items);
-public record OrderItemRequest(Guid ProductId, int Quantity);
+public record OrderItemRequest(Guid ProductId, int Quantity);

@@ -25,10 +25,33 @@ public class Order
         Status = OrderStatus.Pending; 
     }
 
-    // YENİ EKLENEN METOT: Durum makinesini işletmek için dışarıdan çağrılacak
-    public void UpdateStatus(OrderStatus newStatus)
+    public void MarkAsStockReserved()
     {
-        Status = newStatus;
+        if (Status != OrderStatus.Pending)
+            throw new InvalidOperationException("Yalnızca 'Pending' durumundaki siparişlerin stoğu rezerve edilebilir.");
+        
+        Status = OrderStatus.StockReserved;
+    }
+
+    public void MarkAsPaid()
+    {
+        // Pending durumundan da geçilebilir veya StockReserved şart koşulabilir. Order modülü StockReservedEvent'i dinlemediği için Pending'den Paid'e geçiş olabilir.
+        if (Status != OrderStatus.StockReserved && Status != OrderStatus.Pending)
+            throw new InvalidOperationException("Sipariş ödenemez. (Sipariş iptal edilmiş veya zaten ödenmiş.)");
+        
+        Status = OrderStatus.Paid;
+    }
+
+    public void Cancel(string reason)
+    {
+        if (Status == OrderStatus.Paid)
+            throw new InvalidOperationException("Ödenmiş bir sipariş doğrudan iptal edilemez (iade süreci gerektirir).");
+            
+        if (Status == OrderStatus.Cancelled)
+            return; // Zaten iptal edilmiş
+            
+        Status = OrderStatus.Cancelled;
+        // Not: 'reason' değişkenini loglamak veya veritabanında tutmak için yeni bir alan eklenebilir.
     }
 }
 

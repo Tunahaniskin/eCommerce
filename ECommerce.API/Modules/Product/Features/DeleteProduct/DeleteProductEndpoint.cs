@@ -1,8 +1,7 @@
-using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
 using ECommerce.API.Infrastructure.Extensions;
 using ECommerce.API.Modules.Auth.Constants;
-using Microsoft.EntityFrameworkCore;
+using ECommerce.API.Infrastructure.Handlers;
 
 namespace ECommerce.API.Modules.Product.Features.DeleteProduct;
 
@@ -10,23 +9,20 @@ public class DeleteProductEndpoint : IAdminEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapDelete("/products/{id:guid}", async (Guid id, AppDbContext dbContext) =>
+        app.MapDelete("/products/{id:guid}", async (Guid id, ICommandHandler<DeleteProductCommand, DeleteProductResult> handler) =>
         {
-            if (id == Guid.Empty)
-                return Results.BadRequest(new { Message = "Geçersiz ürün kimliği." });
+            var command = new DeleteProductCommand(id);
+            var result = await handler.HandleAsync(command);
 
-            var product = await dbContext.Products.FirstOrDefaultAsync(p => p.Id == id);
+            if (!result.IsSuccess)
+            {
+                if (result.Message.Contains("Geçersiz"))
+                    return Results.BadRequest(new { result.Message });
+                    
+                return Results.NotFound(new { result.Message });
+            }
 
-            if (product is null)
-                return Results.NotFound(new { Message = "Ürün bulunamadı." });
-
-            if (product.IsDeleted)
-                return Results.NotFound(new { Message = "Ürün bulunamadı." });
-
-            product.MarkAsDeleted();
-            await dbContext.SaveChangesAsync();
-
-            return Results.Ok(new { Message = "Ürün başarıyla silindi." });
+            return Results.Ok(new { result.Message });
         })
         .RequirePermission(Permissions.Product.Delete);
     }

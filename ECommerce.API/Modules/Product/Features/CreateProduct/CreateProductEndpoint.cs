@@ -1,9 +1,8 @@
-using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Endpoints;
 using ECommerce.API.Infrastructure.Extensions;
 using ECommerce.API.Infrastructure.Validation;
 using ECommerce.API.Modules.Auth.Constants;
-using ProductEntity = ECommerce.API.Modules.Product.Entities.Product;
+using ECommerce.API.Infrastructure.Handlers;
 
 namespace ECommerce.API.Modules.Product.Features.CreateProduct;
 
@@ -11,18 +10,12 @@ public class CreateProductEndpoint : IAdminEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        app.MapPost("/products", async (CreateProductRequest request, AppDbContext dbContext) =>
+        app.MapPost("/products", async (CreateProductRequest request, ICommandHandler<CreateProductCommand, CreateProductResult> handler) =>
         {
-            var product = new ProductEntity(request.Name, request.Price, request.Stock);
-            
-            dbContext.Products.Add(product);
-            await dbContext.SaveChangesAsync();
+            var command = new CreateProductCommand(request.Name, request.Price, request.Stock);
+            var result = await handler.HandleAsync(command);
 
-            return Results.Created($"/api/products/{product.Id}", new 
-            { 
-                product.Id, 
-                Message = "Ürün başarıyla oluşturuldu." 
-            });
+            return Results.Created($"/api/products/{result.Id}", result);
         })
         .AddEndpointFilter<ValidationFilter<CreateProductRequest>>()
         .RequirePermission(Permissions.Product.Create);

@@ -1,9 +1,11 @@
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Modules.Product;
 using ECommerce.API.Modules.Order;
+using ECommerce.API.Modules.Payment;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ECommerce.API.Infrastructure.Endpoints;
+using ECommerce.API.Infrastructure.Extensions;
 using FluentValidation;
 using ECommerce.API.Infrastructure.Database.Interceptors;
 using System.Text;
@@ -44,7 +46,9 @@ builder.Services.AddMassTransit(x =>
 // 3. Modüller, Validation ve Swagger
 builder.Services.AddProductModule();
 builder.Services.AddOrderModule();
+builder.Services.AddPaymentModule();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddCommandHandlers(typeof(Program).Assembly); // YENİ: Tüm ICommandHandler sınıflarını kaydeder
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
