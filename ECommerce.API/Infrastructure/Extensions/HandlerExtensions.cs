@@ -19,7 +19,19 @@ public static class HandlerExtensions
 
             if (commandInterface != null)
             {
-                services.AddScoped(commandInterface, handler);
+                // 1. Asıl handler'ı kendi sınıf adıyla kaydet (Decorator içinden çağırabilmek için)
+                services.AddScoped(handler);
+
+                // 2. Arayüz istendiğinde (Endpoint üzerinden) Decorator üretip asıl handler'ı içine ver
+                services.AddScoped(commandInterface, sp =>
+                {
+                    var innerHandler = sp.GetRequiredService(handler);
+                    var decoratorType = typeof(ECommerce.API.Infrastructure.Logging.LoggingCommandHandlerDecorator<,>)
+                        .MakeGenericType(commandInterface.GetGenericArguments());
+                    
+                    return ActivatorUtilities.CreateInstance(sp, decoratorType, innerHandler);
+                });
+                
                 continue; // Kaydettiysek sonrakine geç
             }
 
@@ -29,7 +41,18 @@ public static class HandlerExtensions
 
             if (queryInterface != null)
             {
-                services.AddScoped(queryInterface, handler);
+                // 1. Asıl query handler'ı kendi sınıf adıyla kaydet
+                services.AddScoped(handler);
+
+                // 2. Arayüz istendiğinde Query Decorator üretip asıl handler'ı içine ver
+                services.AddScoped(queryInterface, sp =>
+                {
+                    var innerHandler = sp.GetRequiredService(handler);
+                    var decoratorType = typeof(ECommerce.API.Infrastructure.Logging.LoggingQueryHandlerDecorator<,>)
+                        .MakeGenericType(queryInterface.GetGenericArguments());
+                    
+                    return ActivatorUtilities.CreateInstance(sp, decoratorType, innerHandler);
+                });
             }
         }
 

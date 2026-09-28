@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+using ECommerce.API.Infrastructure.Logging;
 
 namespace ECommerce.API.Modules.Product.Entities;
 
@@ -17,12 +17,7 @@ public class Product
         Name = default!; 
     }
 
-    private readonly ILogger<Product> _logger;    
 
-    public Product(ILogger<Product> logger)
-    {
-        _logger = logger;
-    }
 
     public Product(string name, decimal price, int stock)
     {
@@ -48,7 +43,7 @@ public class Product
     // 2. ADIM (BAŞARILI): Ödeme alındı, rezerve stoğu tamamen sistemden düş
     public void CommitStock(int quantity)
     {
-        _logger.LogInformation("[PRODUCT SAGA] Ürün gelen {quantity} ", quantity);
+        AppLogger.Info($"[PRODUCT SAGA] Ürün gelen {quantity}");
 
         if (quantity <= 0)
             throw new ArgumentException("Sistemden düşülecek miktar sıfırdan büyük olmalıdır.", nameof(quantity));
@@ -59,7 +54,7 @@ public class Product
         Stock -= quantity;
         ReservedStock -= quantity;
 
-        _logger.LogInformation("[PRODUCT SAGA] Ürün stock {Stock} ürün reservedStock {ReservedStock}  ", Stock, ReservedStock);
+        AppLogger.Info($"[PRODUCT SAGA] Ürün stock {Stock} ürün reservedStock {ReservedStock}");
  
     }
 

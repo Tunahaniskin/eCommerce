@@ -3,19 +3,16 @@ using ECommerce.API.Infrastructure.Database.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using ECommerce.API.Infrastructure.Logging;
 
 namespace ECommerce.API.Modules.Product.Consumers;
 
 public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<PaymentFailedConsumer> _logger;
-
-    public PaymentFailedConsumer(AppDbContext dbContext, ILogger<PaymentFailedConsumer> logger)
+    public PaymentFailedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<PaymentFailedEvent> context)
@@ -30,11 +27,11 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
 
         if (alreadyProcessed)
         {
-            _logger.LogWarning("[PRODUCT SAGA] Mükerrer PaymentFailedEvent tespit edildi. İşlem atlanıyor. MessageId: {MessageId}", messageId);
+            AppLogger.Warn($"[PRODUCT SAGA] Mükerrer PaymentFailedEvent tespit edildi. İşlem atlanıyor. MessageId: {messageId}");
             return;
         }
 
-        _logger.LogWarning("[PRODUCT SAGA] Sipariş {OrderId} için ödeme başarısız. Rezerve stoklar iade ediliyor.", message.OrderId);
+        AppLogger.Warn($"[PRODUCT SAGA] Sipariş {message.OrderId} için ödeme başarısız. Rezerve stoklar iade ediliyor.");
 
         // İade edilecek ürünleri ve miktarları bulmak için sipariş kalemlerini çekiyoruz.
         var orderItems = await _dbContext.Orders
@@ -56,7 +53,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(p => p.ReservedStock, p => p.ReservedStock - item.Quantity));
                         
-                _logger.LogInformation("[PRODUCT SAGA] Ödeme başarısız. Ürün {ProductId} için {Quantity} adet rezerve stok iade edildi.", item.ProductId, item.Quantity);
+                AppLogger.Info($"[PRODUCT SAGA] Ödeme başarısız. Ürün {item.ProductId} için {item.Quantity} adet rezerve stok iade edildi.");
             }
 
             // 3. Mesajı işlendi olarak kaydet
@@ -65,12 +62,12 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            _logger.LogInformation("[PRODUCT SAGA] Sipariş {OrderId} için rezerve stoklar başarıyla serbest bırakıldı.", message.OrderId);
+            AppLogger.Info($"[PRODUCT SAGA] Sipariş {message.OrderId} için rezerve stoklar başarıyla serbest bırakıldı.");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogError(ex, "[PRODUCT SAGA] Rezerve stok iadesi sırasında hata oluştu. Sipariş: {OrderId}", message.OrderId);
+            AppLogger.Error($"[PRODUCT SAGA] Rezerve stok iadesi sırasında hata oluştu. Sipariş: {message.OrderId}", ex);
             throw; // MassTransit'in tekrar denemesi (retry) için hatayı fırlat
         }
     }

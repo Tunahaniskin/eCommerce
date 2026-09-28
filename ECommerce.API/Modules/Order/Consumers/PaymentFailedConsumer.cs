@@ -2,24 +2,22 @@ using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
+using ECommerce.API.Infrastructure.Logging;
 
 namespace ECommerce.API.Modules.Order.Consumers;
 
 public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<PaymentFailedConsumer> _logger;
-
-    public PaymentFailedConsumer(AppDbContext dbContext, ILogger<PaymentFailedConsumer> logger)
+    public PaymentFailedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<PaymentFailedEvent> context)
     {
         var message = context.Message;
-        _logger.LogWarning("[ORDER SAGA] Sipariş {OrderId} ödeme hatası aldı. Sipariş iptal ediliyor. Sebep: {Reason}", message.OrderId, message.Reason);
+        AppLogger.Warn($"[ORDER SAGA] Sipariş {message.OrderId} ödeme hatası aldı. Sipariş iptal ediliyor. Sebep: {message.Reason}");
 
         var order = await _dbContext.Orders.FindAsync(context.Message.OrderId);
 
@@ -29,7 +27,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
             await _dbContext.SaveChangesAsync();
         }
 
-        _logger.LogInformation("[ORDER SAGA] Sipariş {OrderId} statüsü 'Cancelled' olarak güncellendi.", message.OrderId);
+        AppLogger.Info($"[ORDER SAGA] Sipariş {message.OrderId} statüsü 'Cancelled' olarak güncellendi.");
 
     }
 }

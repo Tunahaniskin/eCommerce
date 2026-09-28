@@ -2,25 +2,23 @@ using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
+using ECommerce.API.Infrastructure.Logging;
 
 namespace ECommerce.API.Modules.Order.Consumers;
 
 public class StockReservationFailedConsumer : IConsumer<StockReservationFailedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<StockReservationFailedConsumer> _logger;
-
-    public StockReservationFailedConsumer(AppDbContext dbContext, ILogger<StockReservationFailedConsumer> logger)
+    public StockReservationFailedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<StockReservationFailedEvent> context)
     {
         var message = context.Message;
         
-        _logger.LogWarning("[ORDER SAGA] Sipariş {OrderId} için stok rezervasyonu başarısız oldu. Sipariş iptal ediliyor. Sebep: {Reason}", message.OrderId, message.Reason);
+        AppLogger.Warn($"[ORDER SAGA] Sipariş {message.OrderId} için stok rezervasyonu başarısız oldu. Sipariş iptal ediliyor. Sebep: {message.Reason}");
 
         var order = await _dbContext.Orders.FindAsync(message.OrderId);
 
@@ -30,11 +28,11 @@ public class StockReservationFailedConsumer : IConsumer<StockReservationFailedEv
             order.Cancel(message.Reason);
             await _dbContext.SaveChangesAsync();
             
-            _logger.LogInformation("[ORDER SAGA] Sipariş {OrderId} statüsü stok yetersizliği nedeniyle 'Cancelled' olarak güncellendi.", message.OrderId);
+            AppLogger.Info($"[ORDER SAGA] Sipariş {message.OrderId} statüsü stok yetersizliği nedeniyle 'Cancelled' olarak güncellendi.");
         }
         else
         {
-            _logger.LogInformation("[ORDER SAGA] Sipariş {OrderId} bulunamadı veya statüsü zaten güncellenmiş (Idempotency). Mevcut statü: {Status}", message.OrderId, order?.Status);
+            AppLogger.Info($"[ORDER SAGA] Sipariş {message.OrderId} bulunamadı veya statüsü zaten güncellenmiş (Idempotency). Mevcut statü: {order?.Status}");
         }
     }
 }

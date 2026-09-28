@@ -18,7 +18,9 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Veritabanı ve Interceptor
+// 1. Veritabanı, Interceptor ve Loglama Servisleri
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService<ECommerce.API.Infrastructure.Logging.LogBackgroundWorker>();
 builder.Services.AddSingleton<AuditInterceptor>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -106,6 +108,9 @@ builder.Services.AddAuthorization();
 
 // ---------------- BUILD İŞLEMİ ----------------
 var app = builder.Build();
+
+// AppLogger konfigürasyonu
+ECommerce.API.Infrastructure.Logging.AppLogger.Configure(app.Services.GetRequiredService<IHttpContextAccessor>());
 
 // 5. Middleware Pipeline (BUILD'DEN SONRA)
 if (app.Environment.IsDevelopment())

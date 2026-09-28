@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using System.Text.Json;
 using ECommerce.API.Infrastructure.Database.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -7,6 +9,13 @@ namespace ECommerce.API.Infrastructure.Database.Interceptors;
 
 public class AuditInterceptor : SaveChangesInterceptor
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public AuditInterceptor(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, 
         InterceptionResult<int> result, 
@@ -15,13 +24,17 @@ public class AuditInterceptor : SaveChangesInterceptor
         var dbContext = eventData.Context;
         if (dbContext == null) return base.SavingChangesAsync(eventData, result, cancellationToken);
 
-        var auditEntries = new List<AuditLog>();
+        var auditEntries = new List<SystemLog>();
+
+        // HTTP Context'ten TraceId ve UserId al
+        var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
+        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
 
         // ChangeTracker üzerinden değişen tüm entity'leri yakala
         foreach (var entry in dbContext.ChangeTracker.Entries())
         {
-            // Değişmeyenleri, izlenmeyenleri ve AuditLog'un kendisini (sonsuz döngüyü engellemek için) atla
-            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+            // Değişmeyenleri, izlenmeyenleri ve SystemLog'un kendisini (sonsuz döngüyü engellemek için) atla
+            if (entry.Entity is SystemLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                 continue;
 
             var tableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name;
@@ -62,20 +75,21 @@ public class AuditInterceptor : SaveChangesInterceptor
             }
 
             // Toplanan verileri JSON formatına dönüştürüp listeye ekle
-            auditEntries.Add(new AuditLog(
+            auditEntries.Add(SystemLog.CreateAudit(
+                traceId,
+                userId,
                 tableName,
                 action,
                 JsonSerializer.Serialize(keyValues),
                 oldValues.Count == 0 ? null : JsonSerializer.Serialize(oldValues),
-                newValues.Count == 0 ? null : JsonSerializer.Serialize(newValues),
-                "System" // Şimdilik System veriyoruz, ileride HttpContext'ten alacağız
+                newValues.Count == 0 ? null : JsonSerializer.Serialize(newValues)
             ));
         }
 
         // Yakalanan audit log kayıtlarını veritabanına eklenmek üzere Context'e dahil et
         if (auditEntries.Any())
         {
-            dbContext.Set<AuditLog>().AddRange(auditEntries);
+            dbContext.Set<SystemLog>().AddRange(auditEntries);
         }
 
         return base.SavingChangesAsync(eventData, result, cancellationToken);

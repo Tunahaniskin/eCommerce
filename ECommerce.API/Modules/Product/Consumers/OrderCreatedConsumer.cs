@@ -2,19 +2,16 @@ using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using ECommerce.API.Infrastructure.Logging;
 
 namespace ECommerce.API.Modules.Product.Consumers;
 
 public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<OrderCreatedConsumer> _logger;
-
-    public OrderCreatedConsumer(AppDbContext dbContext, ILogger<OrderCreatedConsumer> logger)
+    public OrderCreatedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
@@ -43,7 +40,7 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
                     break; // Döngüden çık, işlem iptal edilecek
                 }
 
-                _logger.LogInformation("[PRODUCT SAGA] Ürün {ProductId} için {Stock} adet stok var.", item.ProductId, product.Stock);
+                AppLogger.Info($"[PRODUCT SAGA] Ürün {item.ProductId} için {product.Stock} adet stok var.");
 
                 // 2. Atomik SQL Update ile stok rezerve etme (Race condition önleme)
                 // Yalnızca mevcut stok (Stock - ReservedStock) istenen miktardan büyük/eşitse günceller
@@ -59,7 +56,7 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
                     break; // Döngüden çık, işlem iptal edilecek
                 }
 
-                _logger.LogInformation("[PRODUCT SAGA] Ürün {ProductId} için {Quantity} adet stok rezerve edildi.", item.ProductId, item.Quantity);
+                AppLogger.Info($"[PRODUCT SAGA] Ürün {item.ProductId} için {item.Quantity} adet stok rezerve edildi.");
 
                 totalAmount += product.Price * item.Quantity;
             }

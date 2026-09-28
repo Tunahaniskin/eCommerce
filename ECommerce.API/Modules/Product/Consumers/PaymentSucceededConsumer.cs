@@ -47,29 +47,18 @@ public class PaymentSucceededConsumer : IConsumer<PaymentSucceededEvent>
 
         try
         {
-            // Her ürün için rezerve stoğu ve asıl stoğu veritabanında atomik olarak düş (Commit et)
-            // foreach (var item in order.Items)
-            // {
-            //     await _dbContext.Products
-            //         .Where(p => p.Id == item.ProductId)
-            //         .ExecuteUpdateAsync(setters => setters
-            //             .SetProperty(p => p.Stock, p => p.Stock - item.Quantity)
-            //             .SetProperty(p => p.ReservedStock, p => p.ReservedStock - item.Quantity));
-                        
-            //     _logger.LogInformation("[PRODUCT SAGA] Ürün {ProductId} için {Quantity} adet stok sistemden kalıcı olarak düşüldü.", item.ProductId, item.Quantity);
-            // }
-
+            //Her ürün için rezerve stoğu ve asıl stoğu veritabanında atomik olarak düş (Commit et)
             foreach (var item in order.Items)
             {
-                var product = await _dbContext.Products.FindAsync(item.ProductId); // <-- BURASI!
-                if (product is not null)
-                {
-                    product.CommitStock(item.Quantity);
-                }
+                await _dbContext.Products
+                    .Where(p => p.Id == item.ProductId)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.Stock, p => p.Stock - item.Quantity)
+                        .SetProperty(p => p.ReservedStock, p => p.ReservedStock - item.Quantity));
+                        
+                _logger.LogInformation("[PRODUCT SAGA] Ürün {ProductId} için {Quantity} adet stok sistemden kalıcı olarak düşüldü.", item.ProductId, item.Quantity);
             }
            
-
-
             // 3. Mesajı işlendi olarak kaydet
             _dbContext.ProcessedMessages.Add(new ProcessedMessage(messageId, consumerName));
 

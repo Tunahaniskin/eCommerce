@@ -15,7 +15,7 @@ public class AppDbContext : DbContext
     }
 
     // Ortak Altyapı Tabloları
-    public DbSet<AuditLog> AuditLogs { get; set; } // 2. EKLENEN DBSET
+    public DbSet<SystemLog> SystemLogs { get; set; } // 2. EKLENEN DBSET
     public DbSet<ProcessedMessage> ProcessedMessages { get; set; }
 
     // Catalog Modülü Tabloları
@@ -59,8 +59,8 @@ public class AppDbContext : DbContext
             .HasConversion<string>()
             .HasMaxLength(30);
 
-        // 3. EKLENEN ŞEMA TANIMI: AuditLogs tablosunu 'audit' şemasına taşıyoruz
-        modelBuilder.Entity<AuditLog>().ToTable("AuditLogs", "audit");
+        // 3. EKLENEN ŞEMA TANIMI: SystemLogs tablosunu 'audit' şemasına taşıyoruz
+        modelBuilder.Entity<SystemLog>().ToTable("SystemLogs", "audit");
 
         // Idempotency Tablosu
         modelBuilder.Entity<ProcessedMessage>().ToTable("ProcessedMessages", "audit");
