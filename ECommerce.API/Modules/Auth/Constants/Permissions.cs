@@ -16,12 +16,20 @@ public static class Permissions
     public static class Order
     {
         public const string ViewAll = "order.view_all";
+        public const string Update = "order.update"; // Sipariş durumunu güncelleme (örn: kargoya verildi)
         public const string Cancel = "order.cancel";
     }
 
     public static class Users
     {
-        public const string Manage = "users.manage"; // Personel ekleme/yetkilendirme
+        public const string View = "users.view"; // Kullanıcı listesini görebilme
+        public const string Manage = "users.manage"; // Personel/Kullanıcı güncelleme
         public const string Delete = "users.delete";
+    }
+
+    public static class Roles
+    {
+        public const string View = "roles.view"; // Rolleri ve yetkileri görebilme
+        public const string Manage = "roles.manage"; // Yeni rol oluşturma, yetki atama
     }
 }

@@ -15,11 +15,29 @@ public class RegisterEndpoint : IEndpoint
             if (await dbContext.Users.AnyAsync(u => u.Email == request.Email))
                 return Results.BadRequest(new { Message = "Bu e-posta adresi zaten kullanılıyor." });
 
+            var roleName = string.IsNullOrWhiteSpace(request.RoleName) ? "Customer" : request.RoleName;
+            var role = await dbContext.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
+            
+            if (role == null)
+            {
+                // Eğer Customer rolü yoksa otomatik oluştur
+                if (roleName == "Customer")
+                {
+                    role = new Role("Customer");
+                    dbContext.Roles.Add(role);
+                    await dbContext.SaveChangesAsync();
+                }
+                else
+                {
+                    return Results.BadRequest(new { Message = "Geçersiz rol belirtildi." });
+                }
+            }
+
             // Şifreyi Hash'le (BCrypt arkada otomatik olarak 12 round salt ekler)
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             // Kullanıcı nesnesini oluştur
-            var user = new User(request.Email, passwordHash, request.Role);
+            var user = new User(request.Email, passwordHash, role.Id);
 
             dbContext.Users.Add(user);
             await dbContext.SaveChangesAsync();
@@ -30,4 +48,4 @@ public class RegisterEndpoint : IEndpoint
     }
 }
 
-public record RegisterRequest(string Email, string Password, UserRole Role);
+public record RegisterRequest(string Email, string Password, string? RoleName);

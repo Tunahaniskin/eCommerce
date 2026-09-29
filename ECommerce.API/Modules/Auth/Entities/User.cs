@@ -7,48 +7,37 @@ public class User
     public Guid Id { get; private set; }
     public string Email { get; private set; } = default!;
     public string PasswordHash { get; private set; } = default!;
-    public UserRole Role { get; private set; }
-    
-    // Yeni: Kullanıcının atomik yetkileri
-    public List<string> Permissions { get; private set; } = new(); 
-    
-    // Yeni: Soft-delete bayrağı
+    public Guid RoleId { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
+    public Role Role { get; private set; } = default!;
+    public ICollection<UserTemporaryPermission> TemporaryPermissions { get; private set; } = new List<UserTemporaryPermission>();
+
     private User() { } // EF Core için
 
-    public User(string email, string passwordHash, UserRole role, List<string>? permissions = null)
+    public User(string email, string passwordHash, Guid roleId)
     {
         Id = Guid.NewGuid();
         Email = email;
         PasswordHash = passwordHash;
-        Role = role;
+        RoleId = roleId;
         IsDeleted = false;
         CreatedAt = DateTime.UtcNow;
-
-        // SuperAdmin doğuştan her şeye yetkilidir, kısıtlanamaz.
-        if (role == UserRole.SuperAdmin)
-        {
-            Permissions = new List<string> { Constants.Permissions.Wildcard };
-        }
-        else
-        {
-            Permissions = permissions ?? new List<string>();
-        }
     }
 
-    public void UpdatePermissions(List<string> permissions)
+    public void ChangeRole(Guid newRoleId)
     {
-        // SuperAdmin'in yetkisi değiştirilemez
-        if (Role != UserRole.SuperAdmin)
-        {
-            Permissions = permissions.Distinct().ToList();
-        }
+        RoleId = newRoleId;
     }
 
     public void MarkAsDeleted()
     {
         IsDeleted = true;
+    }
+
+    public void GrantTemporaryPermission(string permission, TimeSpan duration, Guid grantedBy)
+    {
+        TemporaryPermissions.Add(new UserTemporaryPermission(Id, permission, DateTime.UtcNow.Add(duration), grantedBy));
     }
 }

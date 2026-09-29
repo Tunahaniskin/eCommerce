@@ -23,17 +23,8 @@ public class JwtProvider
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(ClaimTypes.Role, user.Role.ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-
-        // Yeni Mimari: Kullanıcının yetkilerini claim olarak ekle
-        if (user.Permissions != null && user.Permissions.Any())
-        {
-            foreach (var permission in user.Permissions)
-            {
-                claims.Add(new Claim("permission", permission));
-            }
-        }
 
         var secretKey = _configuration["JwtOptions:SecretKey"]!;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));

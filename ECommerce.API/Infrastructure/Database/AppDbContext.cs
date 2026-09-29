@@ -22,6 +22,9 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products { get; set; }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<UserTemporaryPermission> UserTemporaryPermissions { get; set; }
 
     // Order Modülü Tabloları
     public DbSet<Order> Orders { get; set; }
@@ -70,10 +73,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>().ToTable("Users", "auth");
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
 
-        // Permissions listesini PostgreSQL text array olarak sakla
-        modelBuilder.Entity<User>()
-            .Property(u => u.Permissions)
-            .HasColumnType("text[]");
+        modelBuilder.Entity<Role>().ToTable("Roles", "auth");
+        
+        modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", "auth");
+        modelBuilder.Entity<RolePermission>().HasKey(rp => new { rp.RoleId, rp.Permission });
+
+        modelBuilder.Entity<UserTemporaryPermission>().ToTable("UserTemporaryPermissions", "auth");
 
         // Global Query Filter (Sadece silinmemiş kullanıcıları getir)
         modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);

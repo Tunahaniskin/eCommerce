@@ -15,11 +15,16 @@ using Microsoft.OpenApi.Models;
 using ECommerce.API.Modules.Auth.Options;
 using ECommerce.API.Modules.Auth.Services;
 using System.Security.Claims;
+using DotNetEnv;
 
+Env.Load();
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
-// 1. Veritabanı, Interceptor ve Loglama Servisleri
+// 1. Veritabanı, Interceptor, Loglama ve Cache Servisleri
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<UserPermissionService>();
 builder.Services.AddHostedService<ECommerce.API.Infrastructure.Logging.LogBackgroundWorker>();
 builder.Services.AddSingleton<AuditInterceptor>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>

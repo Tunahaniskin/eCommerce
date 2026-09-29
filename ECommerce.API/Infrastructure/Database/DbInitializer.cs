@@ -2,6 +2,7 @@ using ECommerce.API.Modules.Auth.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ECommerce.API.Modules.Auth.Constants;
 
 namespace ECommerce.API.Infrastructure.Database;
 
@@ -12,36 +13,51 @@ public static class DbInitializer
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // 1. Veritabanında SuperAdmin var mı kontrol et. 
-        // IgnoreQueryFilters kullanıyoruz çünkü daha önce oluşturulup silinmiş (soft-delete) bir SuperAdmin 
-        // varsa sistemi tekrar aynı e-posta ile kayıt yapmaya çalışıp Unique Constraint hatasına düşürmemeliyiz.
-        bool hasSuperAdmin = await dbContext.Users
-            .IgnoreQueryFilters()
-            .AnyAsync(u => u.Role == UserRole.SuperAdmin);
+        // Bekleyen tüm migration'ları veritabanına otomatik uygula
+        await dbContext.Database.MigrateAsync();
 
-        if (hasSuperAdmin)
+        // 1. Rolleri Kontrol Et ve Oluştur
+        var superAdminRoleName = "SuperAdmin";
+        var superAdminRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Name == superAdminRoleName);
+
+        if (superAdminRole == null)
+        {
+            superAdminRole = new Role(superAdminRoleName);
+            dbContext.Roles.Add(superAdminRole);
+            
+            // SuperAdmin'e Wildcard (*) yetkisini ver
+            dbContext.RolePermissions.Add(new RolePermission(superAdminRole.Id, Permissions.Wildcard));
+            
+            await dbContext.SaveChangesAsync();
+        }
+
+        // 2. Veritabanında SuperAdmin kullanıcısı var mı kontrol et. 
+        bool hasSuperAdminUser = await dbContext.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.RoleId == superAdminRole.Id);
+
+        if (hasSuperAdminUser)
         {
             return;
         }
 
-        // 2. Çevre değişkenlerinden SuperAdmin bilgilerini oku
-        var adminEmail = configuration["INITIAL_ADMIN_EMAIL"];
-        var adminPassword = configuration["INITIAL_ADMIN_PASSWORD"];
+        // 3. .env dosyasından SuperAdmin bilgilerini oku
+        var adminEmail = configuration["INITIAL_SUPERADMIN_EMAIL"];
+        var adminPassword = configuration["INITIAL_SUPERADMIN_PASSWORD"];
 
-        // Tanımlanmamışsa hata fırlatma, sessizce geç. (Zero-trust güvenliği)
         if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
         {
-            Console.WriteLine("[Güvenlik Uyarısı] INITIAL_ADMIN_EMAIL veya INITIAL_ADMIN_PASSWORD tanımlanmadığı için sistem ilk yöneticisiz başlatılıyor.");
+            Console.WriteLine("[Güvenlik Uyarısı] INITIAL_SUPERADMIN_EMAIL veya INITIAL_SUPERADMIN_PASSWORD .env'de tanımlanmadığı için sistem ilk yöneticisiz başlatılıyor.");
             return;
         }
 
-        // 3. SuperAdmin'i oluştur. (User entity constructor'ı Permissions = ["*"] atamasını kendi yapıyor)
+        // 4. SuperAdmin'i oluştur.
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
-        var superAdmin = new User(adminEmail, passwordHash, UserRole.SuperAdmin);
+        var superAdminUser = new User(adminEmail, passwordHash, superAdminRole.Id);
 
-        dbContext.Users.Add(superAdmin);
+        dbContext.Users.Add(superAdminUser);
         await dbContext.SaveChangesAsync();
 
-        Console.WriteLine($"[Sistem] İlk SuperAdmin hesabı başarıyla tanımlandı: {adminEmail}");
+        Console.WriteLine($"[Sistem] İlk SuperAdmin hesabı (.env üzerinden) başarıyla tanımlandı: {adminEmail}");
     }
 }
