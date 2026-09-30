@@ -15,11 +15,22 @@ public class GetProductsEndpoint : IEndpoint
         app.MapGet("/products", async (
             [AsParameters] GetProductsRequest request, 
             HttpContext httpContext,
-            IQueryHandler<GetProductsQuery, List<ProductResponse>> handler) =>
+            IQueryHandler<GetProductsQuery, List<ProductResponse>> handler,
+            ECommerce.API.Modules.Auth.Services.IUserPermissionService permissionService) =>
         {
             var authResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var user = authResult.Principal ?? httpContext.User;
-            bool canReadDeleted = user.HasPermission(Permissions.Product.ReadDeleted);
+            
+            var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                            ?? user.FindFirst("sub")?.Value;
+            
+            bool canReadDeleted = false;
+
+            if (Guid.TryParse(userIdStr, out var userId))
+            {
+                var permissions = await permissionService.GetUserPermissionsAsync(userId, default);
+                canReadDeleted = permissions.Contains("*") || permissions.Contains(Permissions.Product.ReadDeleted);
+            }
 
             var statusKey = request.Status?.ToLower() ?? "active";
 
