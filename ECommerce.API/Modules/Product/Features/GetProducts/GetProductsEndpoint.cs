@@ -16,7 +16,7 @@ public class GetProductsEndpoint : IEndpoint
             [AsParameters] GetProductsRequest request, 
             HttpContext httpContext,
             IQueryHandler<GetProductsQuery, List<ProductResponse>> handler,
-            ECommerce.API.Modules.Auth.Services.IUserPermissionService permissionService) =>
+            ECommerce.API.Modules.Auth.Services.UserPermissionService permissionService) =>
         {
             var authResult = await httpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var user = authResult.Principal ?? httpContext.User;
@@ -28,8 +28,8 @@ public class GetProductsEndpoint : IEndpoint
 
             if (Guid.TryParse(userIdStr, out var userId))
             {
-                var permissions = await permissionService.GetUserPermissionsAsync(userId, default);
-                canReadDeleted = permissions.Contains("*") || permissions.Contains(Permissions.Product.ReadDeleted);
+                var authSnapshot = await permissionService.GetUserAuthSnapshotAsync(userId);
+                canReadDeleted = authSnapshot?.HasPermission(Permissions.Product.ReadDeleted) ?? false;
             }
 
             var statusKey = request.Status?.ToLower() ?? "active";
