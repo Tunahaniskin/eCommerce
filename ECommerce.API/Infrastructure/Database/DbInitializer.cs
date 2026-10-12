@@ -32,12 +32,19 @@ public static class DbInitializer
         }
 
         // 2. Veritabanında SuperAdmin kullanıcısı var mı kontrol et. 
-        bool hasSuperAdminUser = await dbContext.Users
+        var existingSuperAdmin = await dbContext.Users
             .IgnoreQueryFilters()
-            .AnyAsync(u => u.RoleId == superAdminRole.Id);
+            .FirstOrDefaultAsync(u => u.RoleId == superAdminRole.Id);
 
-        if (hasSuperAdminUser)
+        if (existingSuperAdmin != null)
         {
+            // Eğer daha önceden var olan SuperAdmin'in adı veya soyadı boşsa otomatik tamamla
+            if (string.IsNullOrWhiteSpace(existingSuperAdmin.FirstName) || string.IsNullOrWhiteSpace(existingSuperAdmin.LastName))
+            {
+                existingSuperAdmin.UpdateName("Super", "Admin");
+                await dbContext.SaveChangesAsync();
+                Console.WriteLine("[Sistem] Mevcut SuperAdmin kullanıcısının ad-soyad bilgisi güncellendi (Super Admin).");
+            }
             return;
         }
 
@@ -53,7 +60,7 @@ public static class DbInitializer
 
         // 4. SuperAdmin'i oluştur.
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
-        var superAdminUser = new User(adminEmail, passwordHash, superAdminRole.Id);
+        var superAdminUser = new User("Super", "Admin", adminEmail, passwordHash, superAdminRole.Id);
 
         dbContext.Users.Add(superAdminUser);
         await dbContext.SaveChangesAsync();

@@ -36,8 +36,7 @@ public class RegisterEndpoint : IEndpoint
             // Şifreyi Hash'le (BCrypt arkada otomatik olarak 12 round salt ekler)
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // Kullanıcı nesnesini oluştur
-            var user = new User(request.Email, passwordHash, role.Id);
+            var user = new User(request.FirstName, request.LastName, request.Email, passwordHash, role.Id);
 
             dbContext.Users.Add(user);
             await dbContext.SaveChangesAsync();
@@ -48,4 +47,4 @@ public class RegisterEndpoint : IEndpoint
     }
 }
 
-public record RegisterRequest(string Email, string Password, string? RoleName);
+public record RegisterRequest(string FirstName, string LastName, string Email, string Password, string? RoleName);

@@ -3,6 +3,9 @@ using ECommerce.API.Modules.Order.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Modules.Order.Consumers;
 
@@ -37,7 +40,7 @@ public class CreateOrderConsumer : IConsumer<CreateOrderMessage>
         if (!orderItems.Any())
             return;
 
-        var order = new Entities.Order(message.OrderId, orderItems);
+        var order = new Entities.Order(message.OrderId, message.UserId, orderItems);
         
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
@@ -48,6 +51,6 @@ public class CreateOrderConsumer : IConsumer<CreateOrderMessage>
             .ToList();
 
         // context üzerinden fırlatarak CorrelationId zincirini koruyoruz
-        await context.Publish(new OrderCreatedEvent(order.Id, catalogItems));
+        await context.Publish(new OrderCreatedEvent(order.Id, message.UserId, catalogItems));
     }
 }

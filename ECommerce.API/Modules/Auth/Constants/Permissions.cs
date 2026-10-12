@@ -32,4 +32,15 @@ public static class Permissions
         public const string View = "roles.view"; // Rolleri ve yetkileri görebilme
         public const string Manage = "roles.manage"; // Yeni rol oluşturma, yetki atama
     }
+
+    public static class Logs
+    {
+        public const string View = "logs.view"; // Tüm sistem ve audit loglarını görebilme
+    }
+
+    public static class Finance
+    {
+        public const string View = "finance.view"; 
+        public const string Manage = "finance.manage"; 
+    }
 }

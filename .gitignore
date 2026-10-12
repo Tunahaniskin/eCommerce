@@ -14,7 +14,11 @@ publish/
 *.userosscache
 *.sln.docstates
 .vs/
-.vscode/settings.json
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
 
 # ── NuGet ────────────────────────────────────────────────────
 *.nupkg
@@ -90,3 +94,43 @@ _TeamCity*
 [Dd]esktop.ini
 $RECYCLE.BIN/
 *.lnk
+
+# ── Certificates & Keys ──────────────────────────────────────
+*.pfx
+*.p12
+*.cer
+*.key
+*.pem
+
+# ── Local Databases & Caches ─────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ── Local Scripts & Scratch Files ────────────────────────────
+*.csx
+test_*.ps1
+test.ps1
+refactor_*.ps1
+*.scratch.*
+
+# ── Node / Web Tools ─────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm/
+
+# ── Backup & Temporary Files ─────────────────────────────────
+*.bak
+*.tmp
+*.temp
+*.orig
+
+# ── Uploads (User generated files) ───────────────────────────
+**/wwwroot/uploads/
+
+

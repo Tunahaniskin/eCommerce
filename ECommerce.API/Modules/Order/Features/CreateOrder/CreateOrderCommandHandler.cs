@@ -4,6 +4,11 @@ using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Linq;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Modules.Order.Features.CreateOrder;
 
@@ -11,15 +16,23 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, IRe
 {
     private readonly AppDbContext _dbContext;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public CreateOrderCommandHandler(AppDbContext dbContext, IPublishEndpoint publishEndpoint)
+    public CreateOrderCommandHandler(AppDbContext dbContext, IPublishEndpoint publishEndpoint, IHttpContextAccessor httpContextAccessor)
     {
         _dbContext = dbContext;
         _publishEndpoint = publishEndpoint;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<IResult> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
+        var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
         // Aynı ProductId'lerin miktarlarını toplayarak birleştir
         var consolidatedItems = command.Items
             .GroupBy(i => i.ProductId)
@@ -51,7 +64,7 @@ public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand, IRe
             productPriceMap[item.ProductId]
         )).ToList();
 
-        await _publishEndpoint.Publish(new CreateOrderMessage(orderId, orderItems), cancellationToken);
+        await _publishEndpoint.Publish(new CreateOrderMessage(orderId, userId, orderItems), cancellationToken);
 
         return Results.Accepted($"/api/order/orders/{orderId}/status", new
         {

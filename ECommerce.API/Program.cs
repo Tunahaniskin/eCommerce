@@ -2,11 +2,12 @@ using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Modules.Product;
 using ECommerce.API.Modules.Order;
 using ECommerce.API.Modules.Payment;
+using ECommerce.API.Modules.Finance;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ECommerce.API.Infrastructure.Endpoints;
 using ECommerce.API.Infrastructure.Extensions;
-using FluentValidation;
+
 using ECommerce.API.Infrastructure.Database.Interceptors;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -32,6 +33,7 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ECommerce.API.Infrastructure.Storage.IFileStorageService, ECommerce.API.Infrastructure.Storage.LocalFileStorageService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserPermissionService>();
 builder.Services.AddHostedService<ECommerce.API.Infrastructure.Logging.LogBackgroundWorker>();
@@ -63,7 +65,8 @@ builder.Services.AddMassTransit(x =>
 builder.Services.AddProductModule();
 builder.Services.AddOrderModule();
 builder.Services.AddPaymentModule();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddFinanceModule();
+
 builder.Services.AddCommandHandlers(typeof(Program).Assembly); // YENİ: Tüm ICommandHandler sınıflarını kaydeder
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -134,6 +137,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // Serves files from wwwroot
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

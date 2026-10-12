@@ -43,4 +43,15 @@ public class GetProductByIdEndpoint : IEndpoint
     }
 }
 
-public record ProductDetailResponse(Guid Id, string Name, decimal Price, int Stock, bool IsDeleted);
+public record ProductImageDto(Guid Id, string ImagePath, string ThumbnailPath, bool IsMain, int DisplayOrder);
+
+public record ProductDetailResponse(
+    Guid Id, 
+    string Name, 
+    decimal Price, 
+    int Stock, 
+    bool IsDeleted, 
+    Guid CategoryId, 
+    string CategoryName, 
+    List<ProductImageDto> Images
+);

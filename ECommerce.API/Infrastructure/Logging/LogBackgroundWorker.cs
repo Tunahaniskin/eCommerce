@@ -17,25 +17,32 @@ public class LogBackgroundWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Kuyrukta log oldukça tek tek (veya batch halinde) alır ve veritabanına yazar.
-        await foreach (var log in LogQueue.Channel.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            try
+            // Kuyrukta log oldukça tek tek (veya batch halinde) alır ve veritabanına yazar.
+            await foreach (var log in LogQueue.Channel.Reader.ReadAllAsync(stoppingToken))
             {
-                using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                dbContext.SystemLogs.Add(log);
-                
-                // Uygulama çok yoğunsa burada AddRange ve listeleme (batch) yapılabilir.
-                // Şimdilik kuyruktan geldikçe sırayla kaydediyoruz.
-                await dbContext.SaveChangesAsync(stoppingToken);
+                    dbContext.SystemLogs.Add(log);
+                    
+                    // Uygulama çok yoğunsa burada AddRange ve listeleme (batch) yapılabilir.
+                    // Şimdilik kuyruktan geldikçe sırayla kaydediyoruz.
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                }
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                {
+                    // Fallback olarak en azından konsola basalım ki log kaybını bilelim.
+                    Console.WriteLine($"[CRITICAL] LogBackgroundWorker veritabanına log yazamadı! Hata: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                // Fallback olarak en azından konsola basalım ki log kaybını bilelim.
-                Console.WriteLine($"[CRITICAL] LogBackgroundWorker veritabanına log yazamadı! Hata: {ex.Message}");
-            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Host kapanırken fırlatılan normal iptal sinyali, unhandled exception olmaması için yutulur.
         }
     }
 }

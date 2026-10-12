@@ -41,12 +41,21 @@ public class LoginEndpoint : IEndpoint
             // 4. Cache Warm-up (Önbellek Isıtma)
             // İstemci giriş yapar yapmaz ilk isteğinde DB'ye gidilmesin diye RAM'i önceden dolduruyoruz.
             var permissionService = context.RequestServices.GetRequiredService<ECommerce.API.Modules.Auth.Services.UserPermissionService>();
-            await permissionService.GetUserAuthSnapshotAsync(user.Id);
+            
+            // Yeni bir giriş işlemi olduğu için, RAM'de kalmış olabilecek eski yetki önbelleğini siliyoruz.
+            permissionService.InvalidateUserCache(user.Id);
+            
+            var snapshot = await permissionService.GetUserAuthSnapshotAsync(user.Id);
 
             var response = new LoginResponse(
                 AccessToken: token,
                 ExpiresIn: 7200, // 2 saat (saniye cinsinden)
-                User: new UserProfileDto(user.Id, user.Email, user.Role?.Name ?? "")
+                User: new UserProfileDto(
+                    user.Id, 
+                    user.Email, 
+                    user.Role?.Name ?? "", 
+                    snapshot?.Permissions ?? new HashSet<string>()
+                )
             );
 
             return Results.Ok(response);
@@ -57,4 +66,4 @@ public class LoginEndpoint : IEndpoint
 
 public record LoginRequest(string Email, string Password);
 public record LoginResponse(string AccessToken, int ExpiresIn, UserProfileDto User);
-public record UserProfileDto(Guid Id, string Email, string RoleName);
+public record UserProfileDto(Guid Id, string Email, string RoleName, HashSet<string> Permissions);

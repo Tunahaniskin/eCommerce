@@ -16,6 +16,8 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
     public async Task<ProductDetailResponse?> HandleAsync(GetProductByIdQuery request, CancellationToken cancellationToken = default)
     {
         var product = await _dbContext.Products
+            .Include(p => p.Category)
+            .Include(p => p.Images)
             .AsNoTracking()
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
@@ -29,7 +31,10 @@ public class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, Pro
             product.Name,
             product.Price,
             product.Stock,
-            product.IsDeleted
+            product.IsDeleted,
+            product.CategoryId,
+            product.Category.Name,
+            product.Images.OrderBy(i => i.DisplayOrder).Select(i => new ProductImageDto(i.Id, i.ImagePath, i.ThumbnailPath, i.IsMain, i.DisplayOrder)).ToList()
         );
     }
 }

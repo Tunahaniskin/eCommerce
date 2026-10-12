@@ -123,4 +123,20 @@ public class UserPermissionService
     {
         _memoryCache.Remove($"user_auth_{userId}");
     }
+
+    public async Task<bool> HasPermissionAsync(System.Security.Claims.ClaimsPrincipal userPrincipal, string requiredPermission)
+    {
+        var userIdString = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        {
+            return false;
+        }
+
+        var snapshot = await GetUserAuthSnapshotAsync(userId);
+        if (snapshot == null) return false;
+
+        return snapshot.HasPermission(requiredPermission);
+    }
 }
+
+

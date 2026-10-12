@@ -75,7 +75,7 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
                 await transaction.CommitAsync();
                 
                 // Başarılı olduğuna dair eventi ödeme modülüne fırlat
-                await context.Publish(new StockReservedEvent(message.OrderId, totalAmount));
+                await context.Publish(new StockReservedEvent(message.OrderId, message.UserId, totalAmount));
             }
         }
         catch (Exception ex)

@@ -28,7 +28,9 @@ public class AuditInterceptor : SaveChangesInterceptor
 
         // HTTP Context'ten TraceId ve UserId al
         var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
-        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
+        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) 
+                     ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value 
+                     ?? "System";
 
         // ChangeTracker üzerinden değişen tüm entity'leri yakala
         foreach (var entry in dbContext.ChangeTracker.Entries())
@@ -43,6 +45,7 @@ public class AuditInterceptor : SaveChangesInterceptor
             var keyValues = new Dictionary<string, object?>();
             var oldValues = new Dictionary<string, object?>();
             var newValues = new Dictionary<string, object?>();
+            var payload = new Dictionary<string, object?>();
 
             // Sütunları tek tek dönerek eski ve yeni değerleri ayıkla
             foreach (var property in entry.Properties)
@@ -53,6 +56,11 @@ public class AuditInterceptor : SaveChangesInterceptor
                 {
                     keyValues[propertyName] = property.CurrentValue;
                 }
+
+                // Payload (Snapshot) için her alanın o anki değerini al
+                payload[propertyName] = entry.State == EntityState.Deleted 
+                    ? property.OriginalValue 
+                    : property.CurrentValue;
 
                 switch (entry.State)
                 {
@@ -82,7 +90,8 @@ public class AuditInterceptor : SaveChangesInterceptor
                 action,
                 JsonSerializer.Serialize(keyValues),
                 oldValues.Count == 0 ? null : JsonSerializer.Serialize(oldValues),
-                newValues.Count == 0 ? null : JsonSerializer.Serialize(newValues)
+                newValues.Count == 0 ? null : JsonSerializer.Serialize(newValues),
+                payload.Count == 0 ? null : JsonSerializer.Serialize(payload)
             ));
         }
 

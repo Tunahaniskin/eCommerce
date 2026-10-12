@@ -3,6 +3,7 @@ namespace ECommerce.API.Modules.Order.Entities;
 public class Order
 {
     public Guid Id { get; private set; }
+    public Guid UserId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public decimal TotalAmount { get; private set; }
     
@@ -13,12 +14,13 @@ public class Order
 
     private Order() { }
 
-    public Order(Guid id, List<OrderItem> items)
+    public Order(Guid id, Guid userId, List<OrderItem> items)
     {
         if (items == null || items.Count == 0)
             throw new ArgumentException("Sipariş en az bir ürün içermelidir.", nameof(items));
 
         Id = id; // ID artık veritabanı veya kendi içinde değil, Endpoint'ten geliyor
+        UserId = userId;
         CreatedAt = DateTime.UtcNow;
         Items = items;
         TotalAmount = items.Sum(x => x.UnitPrice * x.Quantity); // Fiyatlar Consumer'da gerçek değerleriyle set edilecek
@@ -52,6 +54,14 @@ public class Order
             
         Status = OrderStatus.Cancelled;
         // Not: 'reason' değişkenini loglamak veya veritabanında tutmak için yeni bir alan eklenebilir.
+    }
+
+    public void MarkAsRefunded()
+    {
+        if (Status != OrderStatus.Paid)
+            throw new InvalidOperationException("Yalnızca ödenmiş siparişler iade edilebilir.");
+
+        Status = OrderStatus.Refunded;
     }
 }
 

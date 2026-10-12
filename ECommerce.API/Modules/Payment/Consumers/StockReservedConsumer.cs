@@ -1,7 +1,7 @@
 using ECommerce.API.Infrastructure.Database;
 using ECommerce.API.Infrastructure.Database.Entities;
 using ECommerce.API.Modules.Payment.Entities;
-using ECommerce.API.Modules.Payment.Providers;
+using ECommerce.API.Modules.Finance.Entities;
 using ECommerce.API.Shared.Contracts;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -13,12 +13,10 @@ namespace ECommerce.API.Modules.Payment.Consumers;
 public class StockReservedConsumer : IConsumer<StockReservedEvent>
 {
     private readonly AppDbContext _dbContext;
-    private readonly IPaymentGateway _paymentGateway;
 
-    public StockReservedConsumer(AppDbContext dbContext, IPaymentGateway paymentGateway)
+    public StockReservedConsumer(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _paymentGateway = paymentGateway;
     }
 
     public async Task Consume(ConsumeContext<StockReservedEvent> context)
@@ -52,25 +50,34 @@ public class StockReservedConsumer : IConsumer<StockReservedEvent>
 
         // 3. Payment Kaydını Oluştur (Pending olarak)
         var payment = new Entities.Payment(context.Message.OrderId, context.Message.TotalAmount);
-
         await _dbContext.Payments.AddAsync(payment);
-        await _dbContext.SaveChangesAsync(); 
 
-        // 4. Payment Gateway'e İstek At
-        var result = await _paymentGateway.ProcessPaymentAsync(payment.OrderId, payment.Amount, payment.Currency, context.CancellationToken);
+        // 4. Cüzdan (Wallet) Bakiyesini Kontrol Et
+        var wallet = await _dbContext.Wallets
+            .FirstOrDefaultAsync(w => w.UserId == context.Message.UserId);
 
-        // 5. Sonuca göre durumu güncelle ve Event fırlat
-        if (result.IsSuccess)
+        if (wallet == null || wallet.Balance < context.Message.TotalAmount)
         {
-            payment.MarkAsSuccess(result.TransactionId!);
-
-            await context.Publish(new PaymentSucceededEvent(payment.OrderId));
+            // Bakiye Yetersiz
+            payment.MarkAsFailed("Yetersiz cüzdan bakiyesi.");
+            await context.Publish(new PaymentFailedEvent(payment.OrderId, "Yetersiz cüzdan bakiyesi."));
         }
         else
         {
-            payment.MarkAsFailed(result.ErrorMessage ?? "Payment Failed");
+            // Bakiye Yeterli
+            wallet.DeductBalance(context.Message.TotalAmount);
+            
+            var transaction = new WalletTransaction(
+                wallet.Id, 
+                context.Message.TotalAmount, 
+                WalletTransactionType.OrderPayment, 
+                $"Sipariş ({context.Message.OrderId}) ödemesi.");
+            await _dbContext.WalletTransactions.AddAsync(transaction);
 
-            await context.Publish(new PaymentFailedEvent(payment.OrderId, result.ErrorMessage ?? "Payment Failed"));
+            var transactionId = $"WLT-{Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper()}";
+            payment.MarkAsSuccess(transactionId);
+
+            await context.Publish(new PaymentSucceededEvent(payment.OrderId));
         }
 
         // 6. Mesajı işlendi olarak işaretle

@@ -11,6 +11,9 @@ public class Product
     public int Stock { get; private set; } 
     public int ReservedStock { get; private set; } 
     public bool IsDeleted { get; private set; }
+    public Guid CategoryId { get; private set; }
+    public Category Category { get; private set; } = default!;
+    public ICollection<ProductImage> Images { get; private set; } = new List<ProductImage>();
 
     private Product() 
     { 
@@ -19,13 +22,15 @@ public class Product
 
 
 
-    public Product(string name, decimal price, int stock)
+    public Product(string name, decimal price, int stock, Guid categoryId)
     {
+        if (categoryId == Guid.Empty) throw new ArgumentException("Kategori zorunludur.");
         Id = Guid.NewGuid();
         Name = name;
         Price = price;
         Stock = stock;
         ReservedStock = 0;
+        CategoryId = categoryId;
     }
 
     // 1. ADIM: Stok yeterliyse rezerve et
@@ -76,5 +81,21 @@ public class Product
             throw new InvalidOperationException("Ürün zaten silinmiş durumda.");
 
         IsDeleted = true;
+    }
+
+    public void UpdateDetails(string name, decimal price, int stock, Guid categoryId)
+    {
+        if (categoryId == Guid.Empty) throw new ArgumentException("Kategori zorunludur.");
+        Name = name;
+        Price = price;
+        Stock = stock;
+        CategoryId = categoryId;
+    }
+
+    public void ChangeCategory(Guid newCategoryId)
+    {
+        if (newCategoryId == Guid.Empty)
+            throw new ArgumentException("Kategori boş bırakılamaz. Her ürünün bir kategorisi olmalıdır.");
+        CategoryId = newCategoryId;
     }
 }

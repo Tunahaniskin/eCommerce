@@ -35,7 +35,7 @@ public class SystemLog
     }
 
     // AuditLog Constructor'ı (Veritabanı değişikliği için)
-    public static SystemLog CreateAudit(string? traceId, string? userId, string tableName, string action, string keyValues, string? oldValues, string? newValues)
+    public static SystemLog CreateAudit(string? traceId, string? userId, string tableName, string action, string keyValues, string? oldValues, string? newValues, string? payload = null)
     {
         return new SystemLog
         {
@@ -49,7 +49,8 @@ public class SystemLog
             Action = action,
             KeyValues = keyValues,
             OldValues = oldValues,
-            NewValues = newValues
+            NewValues = newValues,
+            Payload = payload
         };
     }
 
