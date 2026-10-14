@@ -22,5 +22,6 @@ public record OrderDetailsItemDto(
     string ProductName,
     int Quantity,
     decimal UnitPrice,
-    decimal TotalPrice
+    decimal TotalPrice,
+    string? ThumbnailPath = null
 );

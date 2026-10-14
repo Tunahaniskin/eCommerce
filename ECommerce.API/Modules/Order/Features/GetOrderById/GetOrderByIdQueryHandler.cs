@@ -33,17 +33,29 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDe
             return null;
 
         var productIds = orderData.Items.Select(i => i.ProductId).ToList();
-        var products = await _dbContext.Products
+        var productInfo = await _dbContext.Products
+            .Include(p => p.Images)
             .IgnoreQueryFilters()
             .Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                ThumbnailPath = p.Images
+                    .OrderByDescending(img => img.IsMain)
+                    .ThenBy(img => img.DisplayOrder)
+                    .Select(img => img.ThumbnailPath ?? img.ImagePath)
+                    .FirstOrDefault()
+            })
+            .ToDictionaryAsync(p => p.Id, cancellationToken);
 
         var itemsDto = orderData.Items.Select(i => new OrderDetailsItemDto(
             i.ProductId,
-            products.ContainsKey(i.ProductId) ? products[i.ProductId] : "Bilinmeyen Ürün",
+            productInfo.ContainsKey(i.ProductId) ? productInfo[i.ProductId].Name : "Bilinmeyen Ürün",
             i.Quantity,
             i.UnitPrice,
-            i.Quantity * i.UnitPrice
+            i.Quantity * i.UnitPrice,
+            productInfo.ContainsKey(i.ProductId) ? productInfo[i.ProductId].ThumbnailPath : null
         )).ToList();
 
         var customerEmail = orderData.User != null ? orderData.User.Email : "Bilinmiyor";
@@ -58,7 +70,7 @@ public class GetOrderByIdQueryHandler : IQueryHandler<GetOrderByIdQuery, OrderDe
             orderData.Order.TotalAmount,
             orderData.Order.Status.ToString(),
             orderData.Order.CreatedAt,
-            "Sistemde kayıtlı değil", // ShippingAddress is not currently persisted
+            "Sistemde kayıtlı değil",
             itemsDto
         );
     }
